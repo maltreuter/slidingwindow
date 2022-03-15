@@ -51,10 +51,24 @@ void Server::start() {
 	struct sockaddr_storage client_addr;
 	socklen_t sin_size;
 	int clientfd;
+
+	char buf[1024];
+	int nbytes;
 	while(1) {
 		sin_size = sizeof(client_addr);
 		clientfd = accept(sockfd, (struct sockaddr *) &client_addr, &sin_size);
-		send(clientfd, "Hello, world!", 13, 0);
+
+		bool exit = 0;
+		while(!exit) {
+			nbytes = recv(clientfd, buf, 1023, 0);
+			buf[nbytes] = '\0';
+			cout << "Client: " << buf << endl;
+			if(strcmp(buf, "exit") == 0) {
+				exit = 1;
+			}
+		}
+
+		send(clientfd, "ACK", 3, 0);
 		close(clientfd);
 	}
 }

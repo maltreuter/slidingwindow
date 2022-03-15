@@ -36,6 +36,24 @@ void Client::connect() {
 		break;
 	}
 
+	if(fcntl(sockfd, F_GETFL) & O_NONBLOCK) {
+		cout << "nonblocking mode" << endl;
+	}
+
+	bool exit = 0;
+
+	while(!exit) {
+		for(string line; getline(cin, line);) {
+			if(strcmp(line.c_str(), "exit") == 0) {
+				exit = 1;
+			}
+			send(sockfd, line.c_str(), line.length(), 0);
+			if(exit) {
+				break;
+			}
+		}
+	}
+
 	nbytes = recv(sockfd, buf, 1023, 0);
 	buf[nbytes] = '\0';
 
