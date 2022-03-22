@@ -78,6 +78,49 @@ int main(int argc, char *argv[]) {
 		exit(1);
 	}
 
+	//menu variables
+	string protocol;
+	int pkt_size;
+	int tmt_int;
+	int win_size;
+	int seq_range;
+	int errors;
+
+	cout << "Which protocol? (BGN or SR)" << endl;
+	cin >> protocol;
+	cout << "Chosen protocol: " << protocol << endl;
+
+	cout << "Packet size?" << endl;
+	cin >> pkt_size;
+	cout << "Chosen packet size: " << pkt_size << endl;
+
+	cout << "Timeout interval? (ms)" << endl;
+	cin >> tmt_int;
+	cout << "Chosen timout interval: " << tmt_int << endl;
+
+	cout << "Sliding window size?" << endl;
+	cin >> win_size;
+	cout << "Chosen sliding window size: " << win_size << endl;
+
+	cout << "Sequence number range?" << endl;
+	cin >> seq_range;
+	cout << "Chosen sequence number range: " << seq_range << endl;;
+
+	cout << "Situational errors?" << endl;
+	cout << "(0) None" << endl;
+	cout << "(1) Randomly generated" << endl;
+	cout << "(2) User specified" << endl;
+	cin >> errors;
+
+	if(errors == 1) {
+		cout << "Randomly generated errors" << endl;
+	}
+	if(errors == 2) {
+		cout << "User specified errors" << endl;
+	}
+	//end menu
+
+	
 	Client c = Client(argv[1], argv[2]);
 	c.connect();
 
