@@ -1,5 +1,5 @@
 CC    = g++
-FLAGS = -Wall -std=c++14
+FLAGS = -Wall -std=c++17
 
 all: client server
 
@@ -16,4 +16,4 @@ server.o:
 	$(CC) $(FLAGS) -c Server.cpp
 
 clean:
-	rm *.gch *.o client server
+	rm *.gch *.o client server out
