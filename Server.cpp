@@ -65,23 +65,40 @@ void Server::handle_connections() {
 		}
 		cout << "Client connected" << endl;
 
-		ofstream output = ofstream("./out", ofstream::binary);
+		FILE *file = fopen("./out", "wb");
 
 		int n_frames;
-		recv(clientfd, &n_frames, sizeof(int), 0);
 		int packet_size;
+
+		recv(clientfd, &n_frames, sizeof(int), 0);
 		recv(clientfd, &packet_size, sizeof(int), 0);
-		cout << packet_size << endl;
 
-		char buf[packet_size];
+		int total = 0;
+		int packets_rcvd = 0;
 
-		for(int i = 0; i < n_frames - 1; i++) {
-			n_bytes = recv(clientfd, buf, packet_size, 0);
-			output.write(buf, packet_size);
+		char buffer[packet_size];
+		int bytes_written;
+		bool write_done = false;
+
+		while(!write_done) {
+			n_bytes = recv(clientfd, buffer, packet_size + 4, 0);
+			cout << "received packet " << packets_rcvd << endl;
+
+			bytes_written = fwrite(buffer, 1, n_bytes, file);
+
+			total += n_bytes;
+			packets_rcvd++;
+
+			if(bytes_written < packet_size) {
+				write_done = true;
+			}
 		}
 
-		output.close();
 		close(clientfd);
+		fclose(file);
+
+		cout << "packets received: " << packets_rcvd << endl;
+		cout << "bytes received: " << total << endl;
 
 		cout << "Client disconnected" << endl;
 	}

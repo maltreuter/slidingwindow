@@ -44,31 +44,56 @@ int Client::send_file(string file_path) {
 	filesystem::path p = file_path;
 	int file_size = filesystem::file_size(p);
 
-	vector<char> buffer(packet_size, 0);
-
-	ifstream fin(file_path, ifstream::binary);
-
 	n_frames = file_size / packet_size;
 	if(file_size % packet_size != 0) {
 		n_frames++;
 	}
 
 	int total = 0;
+	int packets_sent = 0;
+	int bytes_read;
 
+	/* handshake */
 	send(this->sockfd, &n_frames, sizeof(n_frames), 0);
 	send(this->sockfd, &packet_size, sizeof(packet_size), 0);
 
-	while(!fin.eof()) {
-		fin.read(buffer.data(), buffer.size());
-		streamsize data_size = fin.gcount();
+	/* check if file exists */
+	FILE *file = fopen(file_path.c_str(), "rb");
+	bool read_done = false;
 
-		total += data_size;
-		send(this->sockfd, buffer.data(), buffer.size(), 0);
+	vector<Frame> frames;
+
+	while(!read_done) {
+		char *frame_data = (char*)malloc(packet_size);
+		bytes_read = fread(frame_data, 1, packet_size, file);
+
+		Frame f = Frame(packets_sent, frame_data);
+		string send_this = f.to_string();
+
+		send(this->sockfd, send_this.c_str(), send_this.length(), 0);
+		cout << "sent: " << packets_sent << endl;
+
+		frames.push_back(Frame(packets_sent, frame_data));
+
+		packets_sent++;
+		total += bytes_read;
+
+		if(bytes_read < packet_size) {
+			read_done = true;
+		}
 	}
 
+	fclose(file);
 	close(this->sockfd);
 
+	cout << "packets sent: " << packets_sent << endl;
 	cout << "bytes read: " << total << endl;
+
+	for(auto &frame : frames) {
+		//cout << "Frame: " << frame.seq_num << endl;
+		free(frame.data);
+	}
+
 	return 0;
 }
 

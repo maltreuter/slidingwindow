@@ -4,6 +4,22 @@
 
 using namespace std;
 
+/*
+
+ofstream output = ofstream("./out", ofstream::binary);
+
+char buf[packet_size];
+
+for(int i = 0; i < n_frames - 1; i++) {
+	n_bytes = recv(clientfd, buf, packet_size, 0);
+	output.write(buf, packet_size);
+}
+
+output.close();
+
+*/
+
+
 int main(int argc, char *argv[]) {
 	string file_path = "./test";
 
