@@ -55,7 +55,7 @@ void Server::handle_connections() {
 	struct sockaddr_storage client_addr;
 	socklen_t sin_size;
 	int clientfd;
-	int n_bytes;
+	int bytes_rcvd;
 
 	while(1) {
 		sin_size = sizeof(client_addr);
@@ -76,21 +76,46 @@ void Server::handle_connections() {
 		int total = 0;
 		int packets_rcvd = 0;
 
-		char buffer[packet_size];
+		string ack;
 		int bytes_written;
 		bool write_done = false;
 
 		while(!write_done) {
-			n_bytes = recv(clientfd, buffer, packet_size + 4, 0);
+			char buffer[packet_size];
+
+			bytes_rcvd = recv(clientfd, buffer, packet_size + 5, 0);
+			if(bytes_rcvd == -1) {
+				perror("recv");
+				continue;
+			}
 			cout << "received packet " << packets_rcvd << endl;
 
-			bytes_written = fwrite(buffer, 1, n_bytes, file);
-
-			total += n_bytes;
-			packets_rcvd++;
-
-			if(bytes_written < packet_size) {
+			/* client will send "done" when it is finished sending the file */
+			/* look for "done" in the buffer to stop looping, otherwise write to file */
+			if(string(buffer).find("done") != string::npos) {
 				write_done = true;
+				cout << "received 'done'" << endl;
+			} else {
+				/* separate data from 4 byte seq num at end of buffer */
+				/* send ack and write buffer to file */
+				string data = string(buffer);
+				string seq_num;
+
+				cout << "bytes received: " << bytes_rcvd << endl;
+
+				int pos = data.find(":");
+				if(pos != string::npos) {
+					seq_num = data.substr(pos + 1);
+					data.erase(pos, string::npos);
+					ack = "ack" + seq_num;
+					cout << ack << endl;
+				}
+
+				cout << data.c_str() << endl;
+				bytes_written = fwrite(data.c_str(), 1, data.length(), file);
+
+				total += bytes_written;
+				packets_rcvd++;
 			}
 		}
 
@@ -98,7 +123,7 @@ void Server::handle_connections() {
 		fclose(file);
 
 		cout << "packets received: " << packets_rcvd << endl;
-		cout << "bytes received: " << total << endl;
+		cout << "bytes written: " << total << endl;
 
 		cout << "Client disconnected" << endl;
 	}
@@ -128,16 +153,4 @@ int main(int argc, char *argv[]) {
 	s.start_server();
 	s.handle_connections();
 	s.close_server();
-
-
-	// recv cin
-	// bool exit = 0;
-	// while(!exit) {
-	// 	nbytes = recv(clientfd, buf, 1023, 0);
-	// 	buf[nbytes] = '\0';
-	// 	cout << "Client: " << buf << endl;
-	// 	if(strcmp(buf, "exit") == 0) {
-	// 		exit = 1;
-	// 	}
-	// }
 }

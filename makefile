@@ -1,5 +1,6 @@
 CC    = g++
 FLAGS = -Wall -std=c++17
+POSEIDON = -lstdc++fs
 
 all: client server
 

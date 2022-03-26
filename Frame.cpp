@@ -17,5 +17,5 @@ string Frame::to_string() {
 	int padding = 4 - sn.length();
 	sn.insert(0, padding, '0');
 
-	return string(data) + sn;
+	return string(data) + ':' + sn;
 }

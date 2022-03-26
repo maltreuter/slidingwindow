@@ -52,6 +52,7 @@ int Client::send_file(string file_path) {
 	int total = 0;
 	int packets_sent = 0;
 	int bytes_read;
+	int bytes_sent;
 
 	/* handshake */
 	send(this->sockfd, &n_frames, sizeof(n_frames), 0);
@@ -65,20 +66,34 @@ int Client::send_file(string file_path) {
 
 	while(!read_done) {
 		char *frame_data = (char*)malloc(packet_size);
+		memset(frame_data, 0, packet_size);
+		
 		bytes_read = fread(frame_data, 1, packet_size, file);
+		cout << "bytes read: " << bytes_read << endl;
 
 		Frame f = Frame(packets_sent, frame_data);
-		string send_this = f.to_string();
+		string current_frame = f.to_string();
 
-		send(this->sockfd, send_this.c_str(), send_this.length(), 0);
-		cout << "sent: " << packets_sent << endl;
+		bytes_sent = send(this->sockfd, current_frame.c_str(), packet_size + 5, 0);
+		if(bytes_sent == -1) {
+			perror("send");
+			continue;
+		}
 
-		frames.push_back(Frame(packets_sent, frame_data));
+		cout << "bytes sent: " << bytes_sent << endl;
+		cout << "sent packet " << packets_sent << endl;
+		cout << current_frame << endl;
+
+		/* receive ack */
+
+
+		frames.push_back(f);
 
 		packets_sent++;
 		total += bytes_read;
 
 		if(bytes_read < packet_size) {
+			bytes_sent = send(this->sockfd, "done", 4, 0);
 			read_done = true;
 		}
 	}
