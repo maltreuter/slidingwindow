@@ -21,6 +21,8 @@ class Client {
 		string host;
 		string port;
 		int sockfd;
+		struct sockaddr *server_addr;
+		socklen_t server_addr_len;
 
 		Client(string host, string port);
 		~Client();

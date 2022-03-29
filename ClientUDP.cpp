@@ -17,7 +17,7 @@ void Client::connect() {
 
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family   = AF_UNSPEC;
-	hints.ai_socktype = SOCK_STREAM;
+	hints.ai_socktype = SOCK_DGRAM;
 
 	getaddrinfo(this->host.c_str(), this->port.c_str(), &hints, &address_info);
 
@@ -27,27 +27,26 @@ void Client::connect() {
 			perror("socket");
 			continue;
 		}
-		if(::connect(this->sockfd, p->ai_addr, p->ai_addrlen) == -1) {
-			perror("connect");
-			continue;
-		}
 
 		cout << "Connected" << endl;
+		this->server_addr = p->ai_addr;
+		this->server_addr_len = p->ai_addrlen;
 		break;
 
 	}
 }
 
 int Client::send_file(string file_path) {
+	string packet_size_s = "128";
 	int packet_size = 128;
-	int n_frames;
-	filesystem::path p = file_path;
-	int file_size = filesystem::file_size(p);
-
-	n_frames = file_size / packet_size;
-	if(file_size % packet_size != 0) {
-		n_frames++;
-	}
+	// int n_frames;
+	// filesystem::path p = file_path;
+	// int file_size = filesystem::file_size(p);
+	//
+	// n_frames = file_size / packet_size;
+	// if(file_size % packet_size != 0) {
+	// 	n_frames++;
+	// }
 
 	int total = 0;
 	int packets_sent = 0;
@@ -55,9 +54,11 @@ int Client::send_file(string file_path) {
 	int bytes_sent;
 	int bytes_rcvd;
 
-	/* handshake */
-	send(this->sockfd, &n_frames, sizeof(n_frames), 0);
-	send(this->sockfd, &packet_size, sizeof(packet_size), 0);
+	bytes_sent = sendto(this->sockfd, packet_size_s.c_str(), packet_size_s.length(), 0, this->server_addr, this->server_addr_len);
+	if(bytes_sent == -1) {
+		perror("sendto");
+		exit(1);
+	}
 
 	/* check if file exists */
 	FILE *file = fopen(file_path.c_str(), "rb");
@@ -76,9 +77,9 @@ int Client::send_file(string file_path) {
 		Frame f = Frame(packets_sent, frame_data);
 		string current_frame = f.to_string();
 
-		bytes_sent = send(this->sockfd, current_frame.c_str(), packet_size + 5, 0);
+		bytes_sent = sendto(this->sockfd, current_frame.c_str(), packet_size + 5, 0, this->server_addr, this->server_addr_len);
 		if(bytes_sent == -1) {
-			perror("send");
+			perror("sendto");
 			continue;
 		}
 
@@ -86,8 +87,8 @@ int Client::send_file(string file_path) {
 		cout << "sent packet " << packets_sent << endl;
 		cout << current_frame << endl;
 
-		/* receive ack */
-		bytes_rcvd = recv(this->sockfd, ack, 8, 0);
+		/* receive ack  - check for errors*/
+		bytes_rcvd = recvfrom(this->sockfd, ack, 8, 0, this->server_addr, &this->server_addr_len);
 		cout << "ack " << ack << " received" << endl;
 
 		frames.push_back(f);
@@ -95,8 +96,9 @@ int Client::send_file(string file_path) {
 		packets_sent++;
 		total += bytes_read;
 
+		// check errors in sendto
 		if(bytes_read < packet_size) {
-			bytes_sent = send(this->sockfd, "done", 4, 0);
+			bytes_sent = sendto(this->sockfd, "done", 4, 0, this->server_addr, this->server_addr_len);
 			read_done = true;
 		}
 	}

@@ -19,7 +19,7 @@ void Server::start_server() {
 
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family   = AF_UNSPEC;
-	hints.ai_socktype = SOCK_STREAM;
+	hints.ai_socktype = SOCK_DGRAM;
 	hints.ai_flags    = AI_PASSIVE;
 
 	getaddrinfo(NULL, this->port.c_str(), &hints, &this->address_info);
@@ -45,33 +45,35 @@ void Server::start_server() {
 
 		break;
 	}
-
-	if(listen(this->sockfd, this->backlog) == -1) {
-		perror("listen");
-	}
 }
 
 void Server::handle_connections() {
-	struct sockaddr_storage client_addr;
-	socklen_t sin_size;
-	int clientfd;
+	fd_set readfds;
+	struct timeval timeout;
+
 	int bytes_rcvd;
 
+	int loop = 0;
 	while(1) {
-		sin_size = sizeof(client_addr);
-		clientfd = accept(this->sockfd, (struct sockaddr *) &client_addr, &sin_size);
-		if(clientfd == -1) {
-			perror("accept");
+		struct sockaddr_storage client_addr;
+		socklen_t addr_size = sizeof(client_addr);
+
+		string file_path = "./out" + to_string(loop);
+		FILE *file = fopen(file_path.c_str(), "wb");
+
+		FD_ZERO(&readfds);
+		FD_SET(this->sockfd, &readfds);
+
+		char packet_size[4];
+		bytes_rcvd = recvfrom(this->sockfd, packet_size, 3, 0, (struct sockaddr *) &client_addr, &addr_size);
+		if(bytes_rcvd == -1) {
+			perror("recvfrom");
+			exit(1);
 		}
-		cout << "Client connected" << endl;
 
-		FILE *file = fopen("./out", "wb");
+		packet_size[4] = '\0';
 
-		int n_frames;
-		int packet_size;
-
-		recv(clientfd, &n_frames, sizeof(int), 0);
-		recv(clientfd, &packet_size, sizeof(int), 0);
+		cout << "packet size: " << packet_size << endl;
 
 		int total = 0;
 		int packets_rcvd = 0;
@@ -83,11 +85,11 @@ void Server::handle_connections() {
 		bool write_done = false;
 
 		while(!write_done) {
-			char buffer[packet_size];
+			char buffer[atoi(packet_size)];
 
-			bytes_rcvd = recv(clientfd, buffer, packet_size + 5, 0);
+			bytes_rcvd = recvfrom(this->sockfd, buffer, atoi(packet_size) + 5, 0, (struct sockaddr *) &client_addr, &addr_size);
 			if(bytes_rcvd == -1) {
-				perror("recv");
+				perror("recvfrom");
 				continue;
 			}
 			cout << "received packet " << packets_rcvd << endl;
@@ -113,24 +115,30 @@ void Server::handle_connections() {
 					cout << ack << endl;
 				}
 
-				bytes_sent = send(clientfd, ack.c_str(), ack.length(), 0);
+				// check for errors
+				bytes_sent = sendto(this->sockfd, ack.c_str(), ack.length(), 0, (struct sockaddr *) &client_addr, addr_size);
 				cout << "ack " << seq_num << " sent" << endl;
 
 				cout << data.c_str() << endl;
 				bytes_written = fwrite(data.c_str(), 1, data.length(), file);
+				cout << bytes_written << endl;
 
 				total += bytes_written;
 				packets_rcvd++;
 			}
 		}
 
-		close(clientfd);
-		fclose(file);
+		if(fclose(file) == 0) {
+			cout << "closed file" << endl;
+		} else {
+			cout << "fuck shit" << endl;
+		}
 
 		cout << "packets received: " << packets_rcvd << endl;
 		cout << "bytes written: " << total << endl;
 
 		cout << "Client disconnected" << endl;
+		loop++;
 	}
 }
 
