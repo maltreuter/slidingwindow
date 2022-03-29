@@ -115,6 +115,9 @@ void Server::handle_connections() {
 					seq_num = data.substr(pos + 1);
 					data.erase(pos, string::npos);
 					ack = "ack" + seq_num;
+				} else {
+					cout << "damaged packet" << endl;
+					exit(1);
 				}
 
 				bytes_sent = sendto(this->sockfd, ack.c_str(), ack.length(), 0, (struct sockaddr *) &client_addr, addr_size);
