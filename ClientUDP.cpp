@@ -60,25 +60,24 @@ int Client::send_file(string file_path) {
 	bool read_done = false;
 
 	while(!read_done) {
-		char *frame_data = (char*)malloc(packet_size);
+		char frame_data[packet_size];
 		memset(frame_data, 0, packet_size);
 
 		/* read a frame from the file */
 		bytes_read = fread(frame_data, 1, packet_size, file);
-		// cout << "bytes read: " << bytes_read << endl;
+		cout << "bytes read: " << bytes_read << endl;
+		cout << string(frame_data) << endl;
 
-		Frame f = Frame(packets_sent, frame_data);
+		Frame f = Frame(packets_sent, string(frame_data));
 		string current_frame = f.to_string();
 
-		bytes_sent = sendto(this->sockfd, current_frame.c_str(), packet_size + 5, 0, this->server_addr, this->server_addr_len);
+		bytes_sent = sendto(this->sockfd, current_frame.c_str(), packet_size + 6, 0, this->server_addr, this->server_addr_len);
 		if(bytes_sent == -1) {
 			perror("sendto");
 			continue;
 		}
 
-		// cout << "bytes sent: " << bytes_sent << endl;
 		cout << "sent packet " << packets_sent << endl;
-		// cout << current_frame << endl;
 
 		/* receive ack */
 		char ack[8];
@@ -112,7 +111,7 @@ int Client::send_file(string file_path) {
 
 	for(auto &frame : frames) {
 		//cout << "Frame: " << frame.seq_num << endl;
-		free(frame.data);
+		// free(frame.data);
 	}
 
 	return 0;

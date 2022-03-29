@@ -9,9 +9,9 @@ using namespace std;
 class Frame {
 	public:
 		int seq_num;
-		char *data;
+		string data;
 
-		Frame(int seq_num, char *data);
+		Frame(int seq_num, string data);
 		~Frame();
 		string to_string();
 };

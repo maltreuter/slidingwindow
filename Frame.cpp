@@ -2,7 +2,7 @@
 
 using namespace std;
 
-Frame::Frame(int seq_num, char *data) {
+Frame::Frame(int seq_num, string data) {
 	this->seq_num = seq_num;
 	this->data = data;
 }
@@ -17,5 +17,5 @@ string Frame::to_string() {
 	int padding = 4 - sn.length();
 	sn.insert(0, padding, '0');
 
-	return string(data) + ':' + sn;
+	return data + ':' + sn;
 }

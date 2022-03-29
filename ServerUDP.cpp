@@ -87,10 +87,10 @@ void Server::handle_connections() {
 		bool write_done = false;
 
 		while(!write_done) {
-			char buffer[atoi(packet_size) + 5];
-			memset(buffer, 0, atoi(packet_size) + 5);
+			char buffer[atoi(packet_size) + 6];
+			memset(buffer, 0, atoi(packet_size) + 6);
 
-			bytes_rcvd = recvfrom(this->sockfd, buffer, atoi(packet_size) + 5, 0, (struct sockaddr *) &client_addr, &addr_size);
+			bytes_rcvd = recvfrom(this->sockfd, buffer, atoi(packet_size) + 6, 0, (struct sockaddr *) &client_addr, &addr_size);
 			if(bytes_rcvd == -1) {
 				perror("recvfrom");
 				continue;
@@ -117,6 +117,7 @@ void Server::handle_connections() {
 					ack = "ack" + seq_num;
 				} else {
 					cout << "damaged packet" << endl;
+					cout << data << endl;
 					exit(1);
 				}
 
@@ -129,8 +130,12 @@ void Server::handle_connections() {
 				cout << "ack " << seq_num << " sent" << endl;
 
 				// cout << data.c_str() << endl;
-				bytes_written = fwrite(data.c_str(), 1, data.length(), file);
-				// cout << bytes_written << endl;
+				/* strip null terminator and write */
+				if(data.length() > atoi(packet_size)) {
+					bytes_written = fwrite(data.data(), 1, data.length() - 1, file);
+				} else {
+					bytes_written = fwrite(data.data(), 1, data.length(), file);
+				}
 
 				total += bytes_written;
 				packets_rcvd++;
