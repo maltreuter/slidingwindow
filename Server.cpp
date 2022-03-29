@@ -134,16 +134,6 @@ void Server::handle_connections() {
 	}
 }
 
-int Server::send_file() {
-	cout << "Send file" << endl;
-	return 0;
-}
-
-int Server::receive_file() {
-	cout << "Receive file" << endl;
-	return 0;
-}
-
 int Server::close_server() {
 	return close(this->sockfd);
 }

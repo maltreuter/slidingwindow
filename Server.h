@@ -22,8 +22,6 @@ class Server {
 		~Server();
 		void start_server();
 		void handle_connections();
-		int send_file();
-		int receive_file();
 		int close_server();
 };
 

@@ -37,16 +37,8 @@ void Client::connect() {
 }
 
 int Client::send_file(string file_path) {
-	string packet_size_s = "128";
+	/* user input */
 	int packet_size = 128;
-	// int n_frames;
-	// filesystem::path p = file_path;
-	// int file_size = filesystem::file_size(p);
-	//
-	// n_frames = file_size / packet_size;
-	// if(file_size % packet_size != 0) {
-	// 	n_frames++;
-	// }
 
 	int total = 0;
 	int packets_sent = 0;
@@ -54,7 +46,7 @@ int Client::send_file(string file_path) {
 	int bytes_sent;
 	int bytes_rcvd;
 
-	bytes_sent = sendto(this->sockfd, packet_size_s.c_str(), packet_size_s.length(), 0, this->server_addr, this->server_addr_len);
+	bytes_sent = sendto(this->sockfd, to_string(packet_size).c_str(), to_string(packet_size).length(), 0, this->server_addr, this->server_addr_len);
 	if(bytes_sent == -1) {
 		perror("sendto");
 		exit(1);
@@ -62,17 +54,18 @@ int Client::send_file(string file_path) {
 
 	/* check if file exists */
 	FILE *file = fopen(file_path.c_str(), "rb");
-	bool read_done = false;
 
 	vector<Frame> frames;
+
+	bool read_done = false;
 
 	while(!read_done) {
 		char *frame_data = (char*)malloc(packet_size);
 		memset(frame_data, 0, packet_size);
-		char ack[8];
 
+		/* read a frame from the file */
 		bytes_read = fread(frame_data, 1, packet_size, file);
-		cout << "bytes read: " << bytes_read << endl;
+		// cout << "bytes read: " << bytes_read << endl;
 
 		Frame f = Frame(packets_sent, frame_data);
 		string current_frame = f.to_string();
@@ -83,11 +76,12 @@ int Client::send_file(string file_path) {
 			continue;
 		}
 
-		cout << "bytes sent: " << bytes_sent << endl;
+		// cout << "bytes sent: " << bytes_sent << endl;
 		cout << "sent packet " << packets_sent << endl;
-		cout << current_frame << endl;
+		// cout << current_frame << endl;
 
 		/* receive ack  - check for errors*/
+		char ack[8];
 		bytes_rcvd = recvfrom(this->sockfd, ack, 8, 0, this->server_addr, &this->server_addr_len);
 		cout << "ack " << ack << " received" << endl;
 
