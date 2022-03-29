@@ -87,8 +87,8 @@ void Server::handle_connections() {
 		bool write_done = false;
 
 		while(!write_done) {
-			char buffer[atoi(packet_size)];
-			memset(buffer, 0, atoi(packet_size));
+			char buffer[atoi(packet_size) + 5];
+			memset(buffer, 0, atoi(packet_size) + 5);
 
 			bytes_rcvd = recvfrom(this->sockfd, buffer, atoi(packet_size) + 5, 0, (struct sockaddr *) &client_addr, &addr_size);
 			if(bytes_rcvd == -1) {
@@ -110,15 +110,19 @@ void Server::handle_connections() {
 
 				// cout << "bytes received: " << bytes_rcvd << endl;
 
-				int pos = data.find(":");
+				size_t pos = data.find(":");
 				if(pos != string::npos) {
 					seq_num = data.substr(pos + 1);
 					data.erase(pos, string::npos);
 					ack = "ack" + seq_num;
 				}
 
-				// check for errors
 				bytes_sent = sendto(this->sockfd, ack.c_str(), ack.length(), 0, (struct sockaddr *) &client_addr, addr_size);
+				if(bytes_sent == -1) {
+					perror("sendto");
+					continue;
+				}
+
 				cout << "ack " << seq_num << " sent" << endl;
 
 				// cout << data.c_str() << endl;

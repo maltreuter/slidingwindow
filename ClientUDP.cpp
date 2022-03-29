@@ -80,10 +80,17 @@ int Client::send_file(string file_path) {
 		cout << "sent packet " << packets_sent << endl;
 		// cout << current_frame << endl;
 
-		/* receive ack  - check for errors*/
+		/* receive ack */
 		char ack[8];
 		bytes_rcvd = recvfrom(this->sockfd, ack, 8, 0, this->server_addr, &this->server_addr_len);
-		cout << "ack " << ack << " received" << endl;
+		if(bytes_rcvd == -1) {
+			perror("recvfrom");
+			continue;
+		}
+
+		/* split seq_num */
+		string ack_num = string(ack).substr(3, 4);
+		cout << "ack " << ack_num << " received" << endl;
 
 		frames.push_back(f);
 
