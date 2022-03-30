@@ -154,8 +154,8 @@ void Server::handle_connections() {
 
 		string out_md5 = get_md5(filesystem::path(file_path));
 
-		cout << "\n************************************" << endl; 
-		cout << "received file into '" << file_path << "'\tmd5 sum: " << out_md5 << endl;
+		cout << "\n************************************" << endl;
+		cout << "received file: '" << file_path << "'\tmd5 sum: " << out_md5 << endl;
 		cout << "packets received: " << packets_rcvd << endl;
 		cout << "bytes written: " << total << endl;
 

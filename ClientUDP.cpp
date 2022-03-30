@@ -173,7 +173,7 @@ int Client::send_file(string file_path) {
 
 	/* print stats */
 	cout << "\n************************************" << endl;
-	cout << "Sending file: " << file_path << "\tmd5 sum: " << h.file_md5 << endl;
+	cout << "Sending file: '" << file_path << "'\tmd5 sum: " << h.file_md5 << endl;
 	cout << "packets sent: " << packets_sent << endl;
 	cout << "total bytes read from file: " << total_bytes_read << endl;
 	cout << "total bytes sent to server: " << total_bytes_sent << endl;
