@@ -7,6 +7,11 @@ Frame::Frame(int seq_num, string data) {
 	this->data = data;
 }
 
+Frame::Frame() {
+	this->seq_num = 0;
+	this->data = "";
+}
+
 Frame::~Frame() {
 
 }

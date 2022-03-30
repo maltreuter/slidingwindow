@@ -59,42 +59,59 @@ int Client::send_file(string file_path) {
 
 	bool read_done = false;
 
+	int resend = 0;
+	Frame f = Frame();
 	while(!read_done) {
-		char frame_data[packet_size];
-		memset(frame_data, 0, packet_size);
+		if(resend == 0) {
+			char frame_data[packet_size];
+			memset(frame_data, 0, packet_size);
 
-		/* read a frame from the file */
-		bytes_read = fread(frame_data, 1, packet_size, file);
-		cout << "bytes read: " << bytes_read << endl;
-		cout << string(frame_data) << endl;
+			/* read a frame from the file */
+			bytes_read = fread(frame_data, 1, packet_size, file);
+			cout << "bytes read: " << bytes_read << endl;
+			cout << string(frame_data) << endl;
 
-		Frame f = Frame(packets_sent, string(frame_data));
-		string current_frame = f.to_string();
+			f = Frame(packets_sent, string(frame_data));
+		}
 
-		bytes_sent = sendto(this->sockfd, current_frame.c_str(), packet_size + 6, 0, this->server_addr, this->server_addr_len);
+		bytes_sent = sendto(this->sockfd, f.to_string().c_str(), packet_size + 6, 0, this->server_addr, this->server_addr_len);
 		if(bytes_sent == -1) {
 			perror("sendto");
 			continue;
 		}
 
 		cout << "sent packet " << packets_sent << endl;
+		
+		fd_set select_fds;
+		FD_ZERO(&select_fds);
+		FD_SET(this->sockfd, &select_fds);
 
-		/* receive ack */
-		char ack[8];
-		bytes_rcvd = recvfrom(this->sockfd, ack, 8, 0, this->server_addr, &this->server_addr_len);
-		if(bytes_rcvd == -1) {
-			perror("recvfrom");
-			continue;
+		struct timeval timeout;
+		timeout.tv_sec = 5;
+		timeout.tv_usec = 0;
+
+		if(select(8, &select_fds, NULL, NULL, &timeout) == 0) {
+			cout << "Packet " << packets_sent << " timed out" << endl;
+			resend = 1;
+		} else {
+			/* receive ack */
+			char ack[8];
+			bytes_rcvd = recvfrom(this->sockfd, ack, 8, 0, this->server_addr, &this->server_addr_len);
+			if(bytes_rcvd == -1) {
+				perror("recvfrom");
+				continue;
+			}
+
+			/* split seq_num */
+			string ack_num = string(ack).substr(3, 4);
+			cout << "ack " << ack_num << " received" << endl;
+
+			frames.push_back(f);
+
+			packets_sent++;
+			total += bytes_read;
+			resend = 0;
 		}
-
-		/* split seq_num */
-		string ack_num = string(ack).substr(3, 4);
-		cout << "ack " << ack_num << " received" << endl;
-
-		frames.push_back(f);
-
-		packets_sent++;
-		total += bytes_read;
 
 		// check errors in sendto
 		if(bytes_read < packet_size) {
@@ -109,10 +126,10 @@ int Client::send_file(string file_path) {
 	cout << "packets sent: " << packets_sent << endl;
 	cout << "bytes read: " << total << endl;
 
-	for(auto &frame : frames) {
+	//for(auto &frame : frames) {
 		//cout << "Frame: " << frame.seq_num << endl;
 		// free(frame.data);
-	}
+	//}
 
 	return 0;
 }

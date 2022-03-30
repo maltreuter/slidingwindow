@@ -49,7 +49,6 @@ void Server::start_server() {
 
 void Server::handle_connections() {
 	fd_set readfds;
-	struct timeval timeout;
 
 	int bytes_rcvd;
 	int bytes_written;
@@ -86,6 +85,8 @@ void Server::handle_connections() {
 
 		bool write_done = false;
 
+		int lost_ack_count = 0;
+
 		while(!write_done) {
 			char buffer[atoi(packet_size) + 6];
 			memset(buffer, 0, atoi(packet_size) + 6);
@@ -120,25 +121,32 @@ void Server::handle_connections() {
 					cout << data << endl;
 					exit(1);
 				}
-
-				bytes_sent = sendto(this->sockfd, ack.c_str(), ack.length(), 0, (struct sockaddr *) &client_addr, addr_size);
-				if(bytes_sent == -1) {
-					perror("sendto");
-					continue;
-				}
-
-				cout << "ack " << seq_num << " sent" << endl;
-
-				// cout << data.c_str() << endl;
-				/* strip null terminator and write */
-				if(data.length() > atoi(packet_size)) {
-					bytes_written = fwrite(data.data(), 1, data.length() - 1, file);
+				
+				//this should "lose" ack0020 twice and ack0050 once
+				if((ack == "ack0020" && lost_ack_count < 2) || (ack == "ack0050" && lost_ack_count < 1)) {
+					cout << ack << " not sent" << endl;
+					lost_ack_count++;
 				} else {
-					bytes_written = fwrite(data.data(), 1, data.length(), file);
-				}
+					bytes_sent = sendto(this->sockfd, ack.c_str(), ack.length(), 0, (struct sockaddr *) &client_addr, addr_size);
+					if(bytes_sent == -1) {
+						perror("sendto");
+						continue;
+					}
 
-				total += bytes_written;
-				packets_rcvd++;
+					cout << "ack " << seq_num << " sent" << endl;
+
+					// cout << data.c_str() << endl;
+					/* strip null terminator and write */
+					if(data.length() > atoi(packet_size)) {
+						bytes_written = fwrite(data.data(), 1, data.length() - 1, file);
+					} else {
+						bytes_written = fwrite(data.data(), 1, data.length(), file);
+					}
+
+					total += bytes_written;
+					packets_rcvd++;
+					lost_ack_count = 0;
+				}
 			}
 		}
 

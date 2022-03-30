@@ -12,6 +12,7 @@ class Frame {
 		string data;
 
 		Frame(int seq_num, string data);
+		Frame();
 		~Frame();
 		string to_string();
 };
