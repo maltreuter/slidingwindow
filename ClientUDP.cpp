@@ -39,6 +39,15 @@ void Client::connect() {
 int Client::send_file(string file_path) {
 	/* user input */
 	int packet_size = 128;
+	int max_seq_num = 256;
+
+	/* user input that needs to be sent to server */
+	header h = {
+		to_string(packet_size),
+		to_string(max_seq_num)
+	};
+
+	cout << h.packet_size << endl;
 
 	int total = 0;
 	int packets_sent = 0;
@@ -63,8 +72,8 @@ int Client::send_file(string file_path) {
 	Frame f = Frame();
 	while(!read_done) {
 		if(resend == 0) {
-			char frame_data[packet_size];
-			memset(frame_data, 0, packet_size);
+			char frame_data[packet_size + 1];	/* +1 for null terminator */
+			memset(frame_data, 0, packet_size + 1);
 
 			/* read a frame from the file */
 			bytes_read = fread(frame_data, 1, packet_size, file);
@@ -81,7 +90,7 @@ int Client::send_file(string file_path) {
 		}
 
 		cout << "sent packet " << packets_sent << endl;
-		
+
 		fd_set select_fds;
 		FD_ZERO(&select_fds);
 		FD_SET(this->sockfd, &select_fds);
@@ -103,6 +112,7 @@ int Client::send_file(string file_path) {
 			}
 
 			/* split seq_num */
+			/* "ack0001" "ack0145" */
 			string ack_num = string(ack).substr(3, 4);
 			cout << "ack " << ack_num << " received" << endl;
 

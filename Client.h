@@ -16,6 +16,11 @@
 
 using namespace std;
 
+typedef struct header {
+	string packet_size;
+	string max_seq_num;
+} header;
+
 class Client {
 	public:
 		string host;
