@@ -46,6 +46,7 @@ int Client::send_file(string file_path) {
 	header h = {
 		to_string(packet_size),
 		to_string(max_seq_num),
+		get_md5(filesystem::path(file_path))
 	};
 
 	/* stats */
@@ -171,8 +172,8 @@ int Client::send_file(string file_path) {
 	close(this->sockfd);
 
 	/* print stats */
-	cout << "\n" << "************************************" << endl;
-	cout << "Sending file: " << file_path << endl;
+	cout << "\n************************************" << endl;
+	cout << "Sending file: " << file_path << "\tmd5 sum: " << h.file_md5 << endl;
 	cout << "packets sent: " << packets_sent << endl;
 	cout << "total bytes read from file: " << total_bytes_read << endl;
 	cout << "total bytes sent to server: " << total_bytes_sent << endl;
@@ -217,8 +218,8 @@ int Client::send_cin() {
 }
 
 int main(int argc, char *argv[]) {
-	if(argc != 3) {
-		cout << "Usage: ./client <host> <port>" << endl;
+	if(argc != 4) {
+		cout << "Usage: ./client <host> <port> <path_to_file>" << endl;
 		exit(1);
 	}
 
@@ -267,5 +268,7 @@ int main(int argc, char *argv[]) {
 
 	Client c = Client(argv[1], argv[2]);
 	c.connect();
-	c.send_file("./test");
+	c.send_file(argv[3]);
+
+	get_md5(filesystem::path(argv[3]));
 }

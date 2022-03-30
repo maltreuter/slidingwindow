@@ -121,7 +121,7 @@ void Server::handle_connections() {
 					cout << data << endl;
 					exit(1);
 				}
-				
+
 				//this should "lose" ack0020 twice and ack0050 once
 				if((ack == "ack0020" && lost_ack_count < 2) || (ack == "ack0050" && lost_ack_count < 1)) {
 					cout << ack << " not sent" << endl;
@@ -152,6 +152,10 @@ void Server::handle_connections() {
 
 		fclose(file);
 
+		string out_md5 = get_md5(filesystem::path(file_path));
+
+		cout << "\n************************************" << endl; 
+		cout << "received file into '" << file_path << "'\tmd5 sum: " << out_md5 << endl;
 		cout << "packets received: " << packets_rcvd << endl;
 		cout << "bytes written: " << total << endl;
 
