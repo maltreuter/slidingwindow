@@ -16,11 +16,14 @@ Frame::~Frame() {
 
 }
 
-/* string(data + seq_num) */
-string Frame::to_string() {
-	string sn = ::to_string(seq_num);
+string Frame::padSeqNum() {
+	string sn = ::to_string(this->seq_num);
 	int padding = 4 - sn.length();
 	sn.insert(0, padding, '0');
+	return sn;
+}
 
-	return data + ':' + sn;
+/* string(data + seq_num) */
+string Frame::to_string() {
+	return data + ':' + this->padSeqNum();
 }

@@ -14,6 +14,7 @@ class Frame {
 		Frame(int seq_num, string data);
 		Frame();
 		~Frame();
+		string padSeqNum();
 		string to_string();
 };
 
