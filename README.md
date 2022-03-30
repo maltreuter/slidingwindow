@@ -5,7 +5,8 @@ Implementation of 3 sliding window protocols: Stop and Wait, Go-Back-N, and Sele
 
 ### Compilation
 ```
-make
+make /* compile to use tcp (sock_stream) */
+make udp /* compile to use udp (sock_dgram) */
 make clean
 ```
 
@@ -13,6 +14,9 @@ make clean
 ```
 ./server <port>
 ./client <host> <port>
+
+./serverudp <port>
+./clientudp <host> <port> <path-to-file>
 ```
 
 ## TODO
