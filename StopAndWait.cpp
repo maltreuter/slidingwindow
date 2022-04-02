@@ -1,4 +1,6 @@
 #include "Client.h"
+#include "Timer.h"
+
 #include "utils.h"
 
 using namespace std;
@@ -8,6 +10,13 @@ int main(int argc, char *argv[]) {
 		cout << "Usage: ./client <host> <port> <path_to_file>" << endl;
 		exit(1);
 	}
+
+	int runtime = 0;
+	Timer t = Timer();
+	t.setInterval([&]() {
+		cout << "Runtime++" << endl;
+		runtime++;
+	}, 1000);
 
 	Client c = Client(string(argv[1]), string(argv[2]));
 	c.connect();
@@ -23,7 +32,8 @@ int main(int argc, char *argv[]) {
 	header h = {
 		to_string(packet_size),
 		to_string(max_seq_num),
-		get_md5(filesystem::path(file_path))
+		"yeet"
+		// get_md5(filesystem::path(file_path))
 	};
 
 	/* stats */
@@ -147,6 +157,7 @@ int main(int argc, char *argv[]) {
 	/* before closing the connection we should receive a confirmation
 	from the server that the file checksums matched */
 	c.disconnect();
+	t.stop();
 
 	/* print stats */
 	cout << "\n************************************" << endl;
@@ -154,6 +165,8 @@ int main(int argc, char *argv[]) {
 	cout << "packets sent: " << packets_sent << endl;
 	cout << "total bytes read from file: " << total_bytes_read << endl;
 	cout << "total bytes sent to server: " << total_bytes_sent << endl;
+
+	cout << "Total run time: " << runtime << "s" << endl;
 
 	//for(auto &frame : frames) {
 		//cout << "Frame: " << frame.seq_num << endl;
