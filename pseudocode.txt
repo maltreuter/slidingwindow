@@ -1,0 +1,52 @@
+GoBackN {
+    timeout.sec = 0 //idk what this actually is
+    
+    timer.start()
+
+    queue<Frame> window
+    int resend = 0
+    int send_base = 0
+    int nextseqnum = 0
+    while not done {
+        if(resend) {
+            for(frame in window) {
+                if(frame != null) {
+                    send(frame)
+                    resend = 0
+                }
+            }
+        } else {
+            if(nextseqnum < send_base + windowsize) {
+                Frame f = getNextFrame()
+                send(f)
+                window.push(f)
+                nextseqnum++
+            }
+
+            if(select(ack_size, server.sockfd, NULL, NULL, &timeout) != 0) {
+                recv(ack) //non-blocking
+                send_base++
+                window.pop()
+                
+                //if at the end
+                if(send_base == nextseqnum) {
+                    timer.stop()
+                } else {
+                    //new window, start timer
+                    timer.start()
+                }
+            }
+
+            if(timeout) {
+                timer.start()
+                resend = 1
+            }
+        }
+    }
+}
+
+timer - https://www.fluentcpp.com/2018/12/28/timer-cpp/
+
+SELECTIVE REPEAT:
+What if each frame has a timer?
+You don't shift the window until you get ack window[0], but once you do shift, you have to check subsequent windows because they may already be ack'd
