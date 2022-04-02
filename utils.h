@@ -14,7 +14,7 @@ string get_md5(filesystem::path file_path) {
 
 	string tmp = file_path.filename().string() + "md5.txt";
 
-	string command = "md5 -q " + file_path.filename().string() + " > " + tmp;
+	string command = "md5sum " + file_path.filename().string() + " | cut -d ' ' -f 1 > " + tmp;
 	system(command.c_str());
 
 	FILE *file = fopen(tmp.c_str(), "rb");

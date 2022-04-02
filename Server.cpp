@@ -19,7 +19,7 @@ void Server::start_server() {
 
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family   = AF_UNSPEC;
-	hints.ai_socktype = SOCK_STREAM;
+	hints.ai_socktype = SOCK_DGRAM;
 	hints.ai_flags    = AI_PASSIVE;
 
 	getaddrinfo(NULL, this->port.c_str(), &hints, &this->address_info);
@@ -45,49 +45,55 @@ void Server::start_server() {
 
 		break;
 	}
-
-	if(listen(this->sockfd, this->backlog) == -1) {
-		perror("listen");
-	}
 }
 
 void Server::handle_connections() {
-	struct sockaddr_storage client_addr;
-	socklen_t sin_size;
-	int clientfd;
+	fd_set readfds;
+
 	int bytes_rcvd;
+	int bytes_written;
+	int bytes_sent;
 
+	/* accept connections */
+	int loop = 0;
 	while(1) {
-		sin_size = sizeof(client_addr);
-		clientfd = accept(this->sockfd, (struct sockaddr *) &client_addr, &sin_size);
-		if(clientfd == -1) {
-			perror("accept");
+		struct sockaddr_storage client_addr;
+		socklen_t addr_size = sizeof(client_addr);
+
+		FD_ZERO(&readfds);
+		FD_SET(this->sockfd, &readfds);
+
+		/* receive header size as well? header = seq_num + checksum */
+		/* receive packet size from user input in the client */
+		char packet_size[5];
+		bytes_rcvd = recvfrom(this->sockfd, packet_size, 4, 0, (struct sockaddr *) &client_addr, &addr_size);
+		if(bytes_rcvd == -1) {
+			perror("recvfrom");
+			exit(1);
 		}
-		cout << "Client connected" << endl;
 
-		FILE *file = fopen("./out", "wb");
+		packet_size[4] = '\0';
 
-		int n_frames;
-		int packet_size;
-
-		recv(clientfd, &n_frames, sizeof(int), 0);
-		recv(clientfd, &packet_size, sizeof(int), 0);
+		/* open file to write */
+		string file_path = "./out" + to_string(loop);
+		FILE *file = fopen(file_path.c_str(), "wb");
 
 		int total = 0;
 		int packets_rcvd = 0;
 
 		string ack;
-		int bytes_written;
-		int bytes_sent;
 
 		bool write_done = false;
 
-		while(!write_done) {
-			char buffer[packet_size];
+		int lost_ack_count = 0;
 
-			bytes_rcvd = recv(clientfd, buffer, packet_size + 5, 0);
+		while(!write_done) {
+			char buffer[atoi(packet_size) + 6];
+			memset(buffer, 0, atoi(packet_size) + 6);
+
+			bytes_rcvd = recvfrom(this->sockfd, buffer, atoi(packet_size) + 6, 0, (struct sockaddr *) &client_addr, &addr_size);
 			if(bytes_rcvd == -1) {
-				perror("recv");
+				perror("recvfrom");
 				continue;
 			}
 			cout << "received packet " << packets_rcvd << endl;
@@ -103,34 +109,58 @@ void Server::handle_connections() {
 				string data = string(buffer);
 				string seq_num;
 
-				cout << "bytes received: " << bytes_rcvd << endl;
+				// cout << "bytes received: " << bytes_rcvd << endl;
 
-				int pos = data.find(":");
+				size_t pos = data.find(":");
 				if(pos != string::npos) {
 					seq_num = data.substr(pos + 1);
 					data.erase(pos, string::npos);
 					ack = "ack" + seq_num;
-					cout << ack << endl;
+				} else {
+					cout << "damaged packet" << endl;
+					cout << data << endl;
+					exit(1);
 				}
 
-				bytes_sent = send(clientfd, ack.c_str(), ack.length(), 0);
-				cout << "ack " << seq_num << " sent" << endl;
+				//this should "lose" ack0020 twice and ack0050 once
+				if((ack == "ack0020" && lost_ack_count < 2) || (ack == "ack0050" && lost_ack_count < 1)) {
+					cout << ack << " not sent" << endl;
+					lost_ack_count++;
+				} else {
+					bytes_sent = sendto(this->sockfd, ack.c_str(), ack.length(), 0, (struct sockaddr *) &client_addr, addr_size);
+					if(bytes_sent == -1) {
+						perror("sendto");
+						continue;
+					}
 
-				cout << data.c_str() << endl;
-				bytes_written = fwrite(data.c_str(), 1, data.length(), file);
+					cout << "ack " << seq_num << " sent" << endl;
 
-				total += bytes_written;
-				packets_rcvd++;
+					// cout << data.c_str() << endl;
+					/* strip null terminator and write */
+					if(data.length() > atoi(packet_size)) {
+						bytes_written = fwrite(data.data(), 1, data.length() - 1, file);
+					} else {
+						bytes_written = fwrite(data.data(), 1, data.length(), file);
+					}
+
+					total += bytes_written;
+					packets_rcvd++;
+					lost_ack_count = 0;
+				}
 			}
 		}
 
-		close(clientfd);
 		fclose(file);
 
+		string out_md5 = get_md5(filesystem::path(file_path));
+
+		cout << "\n************************************" << endl;
+		cout << "received file: '" << file_path << "'\tmd5 sum: " << out_md5 << endl;
 		cout << "packets received: " << packets_rcvd << endl;
 		cout << "bytes written: " << total << endl;
 
 		cout << "Client disconnected" << endl;
+		loop++;
 	}
 }
 

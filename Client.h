@@ -13,7 +13,6 @@
 #include <vector>
 
 #include "Frame.h"
-#include "utils.h"
 
 using namespace std;
 
@@ -34,9 +33,8 @@ class Client {
 		Client(string host, string port);
 		~Client();
 		void connect();
-		int send_file(string file_path);
-		int receive_file();
 		int send_cin();
+		int disconnect();
 };
 
 #endif
