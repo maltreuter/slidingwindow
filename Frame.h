@@ -3,15 +3,17 @@
 
 #include <iostream>
 #include <string>
+#include <vector>
 
 using namespace std;
 
 class Frame {
 	public:
 		int seq_num;
-		string data;
+		vector<unsigned char> data;
+		int header_len;
 
-		Frame(int seq_num, string data);
+		Frame(int seq_num, vector<unsigned char> data, int header_len);
 		Frame();
 		~Frame();
 		string padSeqNum();

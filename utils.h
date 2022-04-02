@@ -1,9 +1,18 @@
+#ifndef UTILS_H
+#define UTILS_H
+
 #include <iostream>
 #include <stdlib.h>
 
 #define BUF_SIZE 1024
 
 using namespace std;
+
+typedef struct header {
+	string packet_size;
+	string header_len;
+	string file_md5;
+} header;
 
 /* store md5 sum in a temp file and read into a string */
 /* will need to change to md5sum on poseidon */
@@ -42,3 +51,5 @@ string get_md5(filesystem::path file_path) {
 
 	return md5;
 }
+
+#endif

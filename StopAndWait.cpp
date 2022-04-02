@@ -25,15 +25,14 @@ int main(int argc, char *argv[]) {
 
 	/* menu */
 	int packet_size = 128;
-	int max_seq_num = 256;
+	int header_len = 8;
 
 	/* user input that needs to be sent to server */
-	/* header struct defined in Client.h */
+	/* header struct defined in utils.h */
 	header h = {
 		to_string(packet_size),
-		to_string(max_seq_num),
-		"yeet"
-		// get_md5(filesystem::path(file_path))
+		to_string(header_len),
+		get_md5(filesystem::path(file_path))
 	};
 
 	/* stats */
@@ -46,13 +45,21 @@ int main(int argc, char *argv[]) {
 	int bytes_sent;
 	int bytes_rcvd;
 
-	/* send header data to server */
+	/* send packet size to server */
 	bytes_sent = sendto(c.sockfd, h.packet_size.c_str(), h.packet_size.length(), 0, c.server_addr, c.server_addr_len);
 	if(bytes_sent == -1) {
 		perror("sendto");
 		exit(1);
 	}
-	total_bytes_sent += bytes_sent;
+	// total_bytes_sent += bytes_sent;
+
+	/* send header len to server */
+	bytes_sent = sendto(c.sockfd, h.header_len.c_str(), h.header_len.length(), 0, c.server_addr, c.server_addr_len);
+	if(bytes_sent == -1) {
+		perror("sendto");
+		exit(1);
+	}
+	// total_bytes_sent += bytes_sent;
 
 	/* check if file exists */
 	FILE *file = fopen(file_path.c_str(), "rb");
@@ -65,8 +72,8 @@ int main(int argc, char *argv[]) {
 	Frame f = Frame();
 	while(!read_done) {
 		if(!resend) {
-			char frame_data[packet_size + 1];	/* +1 for null terminator */
-			memset(frame_data, 0, packet_size + 1);
+			unsigned char frame_data[packet_size];	/* +1 for null terminator */
+			memset(frame_data, 0, packet_size);
 
 			/* read a frame from the file */
 			/* fread returns packet_size on success */
@@ -86,15 +93,20 @@ int main(int argc, char *argv[]) {
 
 			// cout << "bytes read: " << bytes_read << endl;
 			// cout << string(frame_data) << endl;
-
-			f = Frame(packets_sent, string(frame_data));
+			vector<unsigned char> data;
+			for(int i = 0; i < bytes_read; i++) {
+				data.push_back(frame_data[i]);
+			}
+			f = Frame(packets_sent, data, header_len);
 		}
+		unsigned char curr_frame[header_len + 1 + packet_size];
+		memcpy(curr_frame, f.padSeqNum().c_str(), header_len + 1);
+		memcpy(curr_frame + header_len + 1, f.data.data(), packet_size);
+		// string curr_frame(f.to_string());
+		// cout << "size of curr_frame: " << sizeof(curr_frame) << endl;
 
-		/* send frame 								*/
-		/* 	frame: 									*/
-		/*		data = packet_size bytes 			*/
-		/*		seq_num = 6 bytes for "":0000\0" 	*/
-		bytes_sent = sendto(c.sockfd, f.to_string().c_str(), f.to_string().length(), 0, c.server_addr, c.server_addr_len);
+		/* send current frame */
+		bytes_sent = sendto(c.sockfd, curr_frame, header_len + 1 + f.data.size(), 0, c.server_addr, c.server_addr_len);
 		if(bytes_sent == -1) {
 			perror("sendto");
 			continue;
@@ -124,7 +136,7 @@ int main(int argc, char *argv[]) {
 		} else {
 			/* receive ack */
 			/* "ack0001\0" "ack0145\0" */
-			char ack[3 + h.max_seq_num.length() + 1];
+			char ack[3 + header_len + 1];
 			bytes_rcvd = recvfrom(c.sockfd, ack, sizeof(ack), 0, c.server_addr, &c.server_addr_len);
 			if(bytes_rcvd == -1) {
 				perror("recvfrom");
@@ -132,7 +144,7 @@ int main(int argc, char *argv[]) {
 			}
 
 			/* split seq_num */
-			string ack_num = string(ack).substr(3, 4);
+			string ack_num = string(ack).substr(3, header_len);
 			cout << "ack " << ack_num << " received" << endl;
 
 			frames.push_back(f);
@@ -150,7 +162,7 @@ int main(int argc, char *argv[]) {
 				perror("sendto");
 				exit(1);
 			}
-			total_bytes_sent += bytes_sent;
+			// total_bytes_sent += bytes_sent;
 		}
 	}
 

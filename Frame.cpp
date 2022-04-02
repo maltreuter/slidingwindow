@@ -2,14 +2,16 @@
 
 using namespace std;
 
-Frame::Frame(int seq_num, string data) {
+Frame::Frame(int seq_num, vector<unsigned char> data, int header_len) {
 	this->seq_num = seq_num;
 	this->data = data;
+	this->header_len = header_len;
 }
 
 Frame::Frame() {
 	this->seq_num = 0;
-	this->data = "";
+	this->data = vector<unsigned char>();
+	this->header_len = 8;
 }
 
 Frame::~Frame() {
@@ -18,12 +20,13 @@ Frame::~Frame() {
 
 string Frame::padSeqNum() {
 	string sn = ::to_string(this->seq_num);
-	int padding = 4 - sn.length();
+	int padding = this->header_len - sn.length();
 	sn.insert(0, padding, '0');
 	return sn;
 }
 
 /* string(data + seq_num) */
 string Frame::to_string() {
-	return data + ':' + this->padSeqNum();
+	// return this->padSeqNum() + data;
+	return "borked";
 }

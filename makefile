@@ -8,7 +8,7 @@ server: server.o
 	$(CC) $(FLAGS) Server.o -o server
 
 stopandwait: client.o frame.o stopandwait.o
-	$(CC) $(FLAGS) Client.o Frame.o StopAndWait.o -o stopandwait
+	$(CC) $(FLAGS) -pthread Client.o Frame.o StopAndWait.o -o stopandwait
 
 client.o:
 	$(CC) $(FLAGS) -c Client.cpp
