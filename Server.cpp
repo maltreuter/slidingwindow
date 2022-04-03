@@ -93,6 +93,7 @@ void Server::handle_connections() {
 		bool write_done = false;
 
 		int lost_ack_count = 0;
+		int acks_sent = 0;
 
 		while(!write_done) {
 			char buffer[atoi(packet_size) + atoi(header_len) + 1];
@@ -121,52 +122,53 @@ void Server::handle_connections() {
 				write_done = true;
 				cout << "received 'done'" << endl;
 			} else {
-				/* separate data from 8 byte seq num */
 				/* send ack and write buffer to file */
 				ack = "ack" + header_s;
 				// cout << "bytes received: " << bytes_rcvd << endl;
 
-				//this should "lose" ack0020 twice and ack0050 once
-				// if((ack == "ack0020" && lost_ack_count < 2) || (ack == "ack0050" && lost_ack_count < 1)) {
-				// 	cout << ack << " not sent" << endl;
-				// 	lost_ack_count++;
-				// } else {
-				bytes_sent = sendto(this->sockfd, ack.c_str(), ack.length(), 0, (struct sockaddr *) &client_addr, addr_size);
-				if(bytes_sent == -1) {
-					perror("sendto");
-					continue;
+				// this should "lose" ack 20 twice and ack 50 once
+				if((acks_sent == 20 && lost_ack_count < 2) || (acks_sent == 50 && lost_ack_count < 1)) {
+					cout << ack << " not sent" << endl;
+					lost_ack_count++;
+				} else {
+					bytes_sent = sendto(this->sockfd, ack.c_str(), ack.length(), 0, (struct sockaddr *) &client_addr, addr_size);
+					if(bytes_sent == -1) {
+						perror("sendto");
+						continue;
+					}
+
+					cout << "ack " << header_s << " sent" << endl;
+
+					bytes_written = fwrite(data, 1, bytes_rcvd - sizeof(header), file);
+
+					total += bytes_written;
+					packets_rcvd++;
+					acks_sent++;
+					lost_ack_count = 0;
 				}
-
-				cout << "ack " << header_s << " sent" << endl;
-
-				// cout << data.c_str() << endl;
-				/* strip null terminator and write */
-				bytes_written = fwrite(data, 1, bytes_rcvd - sizeof(header), file);
-				// if(data.length() > (size_t)atoi(packet_size)) {
-				// 	bytes_written = fwrite(data.data(), 1, data.length() - 1, file);
-				// } else {
-				// 	bytes_written = fwrite(data.data(), 1, data.length(), file);
-				// }
-
-				total += bytes_written;
-				packets_rcvd++;
-				lost_ack_count = 0;
-				// }
 			}
 		}
 
 		fclose(file);
 
-		string out_md5 = get_md5(filesystem::path(file_path));
+		// string out_md5 = get_md5(filesystem::path(file_path));
 
 		cout << "\n************************************" << endl;
-		cout << "received file: '" << file_path << "'\tmd5 sum: " << out_md5 << endl;
+		cout << "received file: '" << file_path << endl;
 		cout << "packets received: " << packets_rcvd << endl;
 		cout << "bytes written: " << total << endl;
 
 		cout << "Client disconnected" << endl;
 		loop++;
 	}
+}
+
+int handshake() {
+	return 0;
+}
+
+int runProtocol() {
+	return 0;
 }
 
 int Server::close_server() {
@@ -182,5 +184,7 @@ int main(int argc, char *argv[]) {
 	Server s = Server(argv[1], 10);
 	s.start_server();
 	s.handle_connections();
+
+	/* signal handler for ctrl-c */
 	s.close_server();
 }

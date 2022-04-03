@@ -16,6 +16,7 @@ class Frame {
 		Frame(int seq_num, vector<unsigned char> data, int header_len);
 		Frame();
 		~Frame();
+		
 		string padSeqNum();
 		string to_string();
 };

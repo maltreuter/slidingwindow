@@ -21,10 +21,17 @@ class Server {
 		struct addrinfo *address_info;
 		int sockfd;
 
+		int packet_size;
+		int protocol;
+		int header_len;
+		int errors;
+
 		Server(string port, int backlog);
 		~Server();
 		void start_server();
 		void handle_connections();
+		int handshake();
+		int runProtocol();
 		int close_server();
 };
 

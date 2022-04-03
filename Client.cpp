@@ -2,9 +2,19 @@
 
 using namespace std;
 
-Client::Client(string host, string port) {
-	this->host = host;
-	this->port = port;
+Client::Client() {
+	this->user = {
+		"", /* file path */
+		"", /* host */
+		"", /* port */
+		-1, /* packet_size */
+		-1, /* timeout interval */
+		-1, /* window size */
+		-1, /* situational errors */
+		-1, /* protocol */
+		8
+	};
+
 	this->sockfd = -1;
 }
 
@@ -12,14 +22,14 @@ Client::~Client() {
 
 }
 
-void Client::connect() {
+int Client::connect() {
 	struct addrinfo hints, *address_info, *p;
 
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family   = AF_UNSPEC;
 	hints.ai_socktype = SOCK_DGRAM;
 
-	getaddrinfo(this->host.c_str(), this->port.c_str(), &hints, &address_info);
+	getaddrinfo(this->user.host.c_str(), this->user.port.c_str(), &hints, &address_info);
 
 	for(p = address_info; p != NULL; p = p->ai_next) {
 		this->sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol);
@@ -31,15 +41,57 @@ void Client::connect() {
 		cout << "Connected" << endl;
 		this->server_addr = p->ai_addr;
 		this->server_addr_len = p->ai_addrlen;
-		break;
-
+		return 0;
 	}
+	return -1;
 }
 
 int Client::disconnect() {
 	close(this->sockfd);
 	return 0;
 }
+
+int Client::handshake() {
+	/* send packet size to server */
+	// cout << this->user.packet_size << endl;
+	// cout << this->user.header_len << endl;
+
+	int bytes_sent = sendto(this->sockfd,
+		to_string(this->user.packet_size).c_str(),
+		to_string(this->user.packet_size).length(),
+		0,
+		this->server_addr,
+		this->server_addr_len
+	);
+	if(bytes_sent == -1) {
+		perror("sendto");
+		return -1;
+	}
+
+	/* send header len to server */
+	bytes_sent = sendto(this->sockfd,
+		to_string(this->user.header_len).c_str(),
+		to_string(this->user.header_len).length(),
+		0,
+		this->server_addr,
+		this->server_addr_len
+	);
+	if(bytes_sent == -1) {
+		perror("sendto");
+		return -1;
+	}
+	return 0;
+}
+
+int Client::get_current_time() {
+	return chrono::duration_cast<chrono::milliseconds>(chrono::system_clock::now().time_since_epoch()).count();
+}
+
+// int Client::runProtocol() {
+// 	StopAndWait s = StopAndWait(this);
+// 	s.send();
+// 	return 0;
+// }
 
 // int main(int argc, char *argv[]) {
 // 	if(argc != 4) {
@@ -48,46 +100,7 @@ int Client::disconnect() {
 // 	}
 //
 // 	//menu variables
-// 	// string protocol;
-// 	// int pkt_size;
-// 	// int tmt_int;
-// 	// int win_size;
-// 	// int seq_range;
-// 	// int errors;
-// 	//
-// 	// cout << "Which protocol? (BGN or SR)" << endl;
-// 	// cin >> protocol;
-// 	// cout << "Chosen protocol: " << protocol << endl;
-// 	//
-// 	// cout << "Packet size?" << endl;
-// 	// cin >> pkt_size;
-// 	// cout << "Chosen packet size: " << pkt_size << endl;
-// 	//
-// 	// cout << "Timeout interval? (ms)" << endl;
-// 	// cin >> tmt_int;
-// 	// cout << "Chosen timout interval: " << tmt_int << endl;
-// 	//
-// 	// cout << "Sliding window size?" << endl;
-// 	// cin >> win_size;
-// 	// cout << "Chosen sliding window size: " << win_size << endl;
-// 	//
-// 	// cout << "Sequence number range?" << endl;
-// 	// cin >> seq_range;
-// 	// cout << "Chosen sequence number range: " << seq_range << endl;;
-// 	//
-// 	// cout << "Situational errors?" << endl;
-// 	// cout << "(0) None" << endl;
-// 	// cout << "(1) Randomly generated" << endl;
-// 	// cout << "(2) User specified" << endl;
-// 	// cin >> errors;
-// 	//
-// 	// if(errors == 1) {
-// 	// 	cout << "Randomly generated errors" << endl;
-// 	// }
-// 	// if(errors == 2) {
-// 	// 	cout << "User specified errors" << endl;
-// 	// }
-// 	//end menu
+
 //
 //
 // 	Client c = Client(argv[1], argv[2]);

@@ -2,13 +2,16 @@ CC    = g++
 FLAGS = -Wall -std=c++17
 POSEIDON = -lstdc++fs
 
-all: stopandwait server
+all: client server
 
 server: server.o
 	$(CC) $(FLAGS) Server.o -o server
 
-stopandwait: client.o frame.o stopandwait.o
-	$(CC) $(FLAGS) -pthread Client.o Frame.o StopAndWait.o -o stopandwait
+client: menu.o frame.o client.o stopandwait.o
+	$(CC) $(FLAGS) Menu.o Frame.o Client.o StopAndWait.o -o client
+
+menu.o:
+	$(CC) $(FLAGS) -c Menu.cpp
 
 client.o:
 	$(CC) $(FLAGS) -c Client.cpp
@@ -23,4 +26,4 @@ stopandwait.o:
 	$(CC) $(FLAGS) -c StopAndWait.cpp
 
 clean:
-	rm *.gch *.o client server out* stopandwait
+	rm *.gch *.o client server out*

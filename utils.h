@@ -2,7 +2,9 @@
 #define UTILS_H
 
 #include <iostream>
+#include <chrono>
 #include <stdlib.h>
+#include <filesystem>
 
 #define BUF_SIZE 1024
 
@@ -13,6 +15,10 @@ typedef struct header {
 	string header_len;
 	string file_md5;
 } header;
+
+int get_current_time() {
+	return chrono::duration_cast<chrono::milliseconds>(chrono::system_clock::now().time_since_epoch()).count();
+}
 
 /* store md5 sum in a temp file and read into a string */
 /* will need to change to md5sum on poseidon */

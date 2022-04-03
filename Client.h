@@ -11,24 +11,35 @@
 #include <filesystem>
 #include <stdio.h>
 #include <vector>
-
-#include "Frame.h"
+#include <stdlib.h>
 
 using namespace std;
 
+typedef struct user_input {
+	string file_path;
+	string host;
+	string port;
+	int packet_size;
+	int timeout_int;
+	int window_size;
+	int errors;
+	int protocol;
+	int header_len;
+} user_input;
+
 class Client {
 	public:
-		string host;
-		string port;
+		user_input user;
 		int sockfd;
 		struct sockaddr *server_addr;
 		socklen_t server_addr_len;
 
-		Client(string host, string port);
+		Client();
 		~Client();
-		void connect();
-		int send_cin();
+		int connect();
 		int disconnect();
+		int handshake();
+		int get_current_time();
 };
 
 #endif
