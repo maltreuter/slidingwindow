@@ -1,26 +1,27 @@
-#ifndef STOPNWAIT_H
-#define STOPNWAIT_H
+#ifndef GOBACKN_H
+#define GOBACKN_H
 
 #include <chrono>
 #include <cstring>
 #include <poll.h>
+#include <queue>
 
 #include "Client.h"
 
 using namespace std;
 
-class StopAndWait {
+class GoBackN {
 	public:
 		Client client;
 		int total_bytes_read;
 		int total_bytes_sent;
 		int packets_sent;
 
-		StopAndWait(Client c);
-		~StopAndWait();
+		GoBackN(Client c);
+		~GoBackN();
 
 		int send();
-		bool receive_ack(int send_time);
+		int receive_ack();
 };
 
 #endif

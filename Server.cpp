@@ -48,106 +48,16 @@ void Server::start_server() {
 }
 
 void Server::handle_connections() {
-	fd_set readfds;
-
-	int bytes_rcvd;
-	int bytes_written;
-	int bytes_sent;
-
 	/* accept connections */
 	int loop = 0;
 	while(1) {
-		struct sockaddr_storage client_addr;
-		socklen_t addr_size = sizeof(client_addr);
+		handshake();
 
-		FD_ZERO(&readfds);
-		FD_SET(this->sockfd, &readfds);
-
-		/* receive packet size from user input in the client */
-		char packet_size[8];
-		bytes_rcvd = recvfrom(this->sockfd, packet_size, 7, 0, (struct sockaddr *) &client_addr, &addr_size);
-		if(bytes_rcvd == -1) {
-			perror("recvfrom");
-			exit(1);
-		}
-		packet_size[bytes_rcvd] = '\0';
-
-		/* receive header length */
-		char header_len[8];
-		bytes_rcvd = recvfrom(this->sockfd, header_len, 7, 0, (struct sockaddr *) &client_addr, &addr_size);
-		if(bytes_rcvd == -1) {
-			perror("recvfrom");
-			exit(1);
-		}
-		header_len[bytes_rcvd] = '\0';
-
-		/* open file to write */
 		string file_path = "./out" + to_string(loop);
 		FILE *file = fopen(file_path.c_str(), "wb");
 
-		int total = 0;
-		int packets_rcvd = 0;
-
-		string ack;
-
-		bool write_done = false;
-
-		int lost_ack_count = 0;
-		int acks_sent = 0;
-
-		while(!write_done) {
-			char buffer[atoi(packet_size) + atoi(header_len) + 1];
-			memset(buffer, 0, atoi(packet_size) + atoi(header_len) + 1);
-
-			bytes_rcvd = recvfrom(this->sockfd, buffer, atoi(packet_size) + atoi(header_len) + 1, 0, (struct sockaddr *) &client_addr, &addr_size);
-			if(bytes_rcvd == -1) {
-				perror("recvfrom");
-				continue;
-			}
-			cout << "received packet " << packets_rcvd << endl;
-			// cout << "sizeof buffer: " << sizeof(buffer) << endl;
-
-			/* parse out header */
-			unsigned char header[atoi(header_len) + 1];
-			unsigned char data[atoi(packet_size)];
-			memcpy(header, buffer, atoi(header_len) + 1);
-			memcpy(data, buffer + atoi(header_len) + 1, atoi(packet_size));
-
-			string header_s(header, header + sizeof(header));
-			// cout << "header: " << header_s << " header size: " << header_s.length() << endl;
-
-			/* client will send "done" when it is finished sending the file */
-			/* look for "done" in the buffer to stop looping, otherwise write to file */
-			if(header_s.find("done") != string::npos) {
-				write_done = true;
-				cout << "received 'done'" << endl;
-			} else {
-				/* send ack and write buffer to file */
-				ack = "ack" + header_s;
-				// cout << "bytes received: " << bytes_rcvd << endl;
-
-				// this should "lose" ack 20 twice and ack 50 once
-				if((acks_sent == 20 && lost_ack_count < 2) || (acks_sent == 50 && lost_ack_count < 1)) {
-					cout << ack << " not sent" << endl;
-					lost_ack_count++;
-				} else {
-					bytes_sent = sendto(this->sockfd, ack.c_str(), ack.length(), 0, (struct sockaddr *) &client_addr, addr_size);
-					if(bytes_sent == -1) {
-						perror("sendto");
-						continue;
-					}
-
-					cout << "ack " << header_s << " sent" << endl;
-
-					bytes_written = fwrite(data, 1, bytes_rcvd - sizeof(header), file);
-
-					total += bytes_written;
-					packets_rcvd++;
-					acks_sent++;
-					lost_ack_count = 0;
-				}
-			}
-		}
+		// stop_and_wait(file);
+		go_back_n(file);
 
 		fclose(file);
 
@@ -155,19 +65,233 @@ void Server::handle_connections() {
 
 		cout << "\n************************************" << endl;
 		cout << "received file: '" << file_path << endl;
-		cout << "packets received: " << packets_rcvd << endl;
-		cout << "bytes written: " << total << endl;
+		cout << "packets received: " << this->conn_info.packets_rcvd << endl;
+		cout << "bytes written: " << this->conn_info.total_bytes_written << endl;
 
 		cout << "Client disconnected" << endl;
 		loop++;
 	}
 }
 
-int handshake() {
+int Server::handshake() {
+	struct sockaddr_storage client_addr;
+	this->conn_info = {
+		client_addr,
+		sizeof(client_addr),
+		0,
+		0,
+		0,
+		0,
+		0
+	};
+
+	/* receive packet size from user input in the client */
+	char packet_size[8];
+	int bytes_rcvd = recvfrom(this->sockfd, packet_size, 7, 0, (struct sockaddr *) &this->conn_info.client_addr, &this->conn_info.addr_size);
+	if(bytes_rcvd == -1) {
+		perror("recvfrom");
+		exit(1);
+	}
+	packet_size[bytes_rcvd] = '\0';
+
+	this->conn_info.packet_size = atoi(packet_size);
+
+	/* receive header length */
+	char header_len[8];
+	bytes_rcvd = recvfrom(this->sockfd, header_len, 7, 0, (struct sockaddr *) &this->conn_info.client_addr, &this->conn_info.addr_size);
+	if(bytes_rcvd == -1) {
+		perror("recvfrom");
+		exit(1);
+	}
+	header_len[bytes_rcvd] = '\0';
+
+	this->conn_info.header_len = atoi(header_len);
+
+	/* Receive protocol and errors */
 	return 0;
 }
 
-int runProtocol() {
+int Server::stop_and_wait(FILE* file) {
+	/* open file to write */
+	string ack;
+
+	bool write_done = false;
+
+	int lost_ack_count = 0;
+	int acks_sent = 0;
+
+	int bytes_rcvd;
+	int bytes_written;
+	int bytes_sent;
+
+	while(!write_done) {
+		char buffer[this->conn_info.packet_size + this->conn_info.header_len + 1];
+		memset(buffer, 0, this->conn_info.packet_size + this->conn_info.header_len + 1);
+
+		bytes_rcvd = recvfrom(this->sockfd,
+			buffer,
+			this->conn_info.packet_size + this->conn_info.header_len + 1,
+			0,
+			(struct sockaddr *) &this->conn_info.client_addr,
+			&this->conn_info.addr_size
+		);
+		if(bytes_rcvd == -1) {
+			perror("recvfrom");
+			continue;
+		}
+		cout << "received packet " << this->conn_info.packets_rcvd << endl;
+		// cout << "sizeof buffer: " << sizeof(buffer) << endl;
+
+		/* parse out header */
+		unsigned char header[this->conn_info.header_len + 1];
+		unsigned char data[this->conn_info.packet_size];
+		memcpy(header, buffer, this->conn_info.header_len + 1);
+		memcpy(data, buffer + this->conn_info.header_len + 1, this->conn_info.packet_size);
+
+		string header_s(header, header + sizeof(header));
+		// cout << "header: " << header_s << " header size: " << header_s.length() << endl;
+
+		/* client will send "done" when it is finished sending the file */
+		/* look for "done" in the buffer to stop looping, otherwise write to file */
+		if(header_s.find("done") != string::npos) {
+			write_done = true;
+			cout << "received 'done'" << endl;
+		} else {
+			/* send ack and write buffer to file */
+			ack = "ack" + header_s;
+			// cout << "bytes received: " << bytes_rcvd << endl;
+
+			// this should "lose" ack 20 twice and ack 50 once
+			if((acks_sent == 20 && lost_ack_count < 2) || (acks_sent == 50 && lost_ack_count < 1)) {
+				cout << ack << " not sent" << endl;
+				lost_ack_count++;
+			} else {
+				bytes_sent = sendto(this->sockfd,
+					ack.c_str(),
+					ack.length(),
+					0,
+					(struct sockaddr *) &this->conn_info.client_addr,
+					this->conn_info.addr_size
+				);
+				if(bytes_sent == -1) {
+					perror("sendto");
+					continue;
+				}
+
+				cout << "ack " << header_s << " sent" << endl;
+
+				bytes_written = fwrite(data, 1, bytes_rcvd - sizeof(header), file);
+
+				this->conn_info.total_bytes_written += bytes_written;
+				this->conn_info.packets_rcvd++;
+				acks_sent++;
+				lost_ack_count = 0;
+			}
+		}
+	}
+
+	return 0;
+}
+
+int Server::go_back_n(FILE* file) {
+	string ack;
+	bool write_done = false;
+	int expected_seq_num = 0;
+	string last_ack = "";
+
+	int bytes_rcvd;
+	int bytes_written;
+	int bytes_sent;
+
+	int lost_ack_count = 0;
+
+	while(!write_done) {
+		char buffer[this->conn_info.packet_size + this->conn_info.header_len + 1];
+		memset(buffer, 0, this->conn_info.packet_size + this->conn_info.header_len + 1);
+
+		bytes_rcvd = recvfrom(this->sockfd,
+			buffer,
+			this->conn_info.packet_size + this->conn_info.header_len + 1,
+			0,
+			(struct sockaddr *) &this->conn_info.client_addr,
+			&this->conn_info.addr_size
+		);
+		if(bytes_rcvd == -1) {
+			perror("recvfrom");
+			continue;
+		}
+		// cout << "sizeof buffer: " << sizeof(buffer) << endl;
+
+		/* parse out header */
+		unsigned char header[this->conn_info.header_len + 1];
+		unsigned char data[this->conn_info.packet_size];
+		memcpy(header, buffer, this->conn_info.header_len + 1);
+		memcpy(data, buffer + this->conn_info.header_len + 1, this->conn_info.packet_size);
+
+		string header_s(header, header + sizeof(header));
+		ack = "ack" + header_s;
+		// cout << "header: " << header_s << " header size: " << header_s.length() << endl;
+
+		/* client will send "done" when it is finished sending the file */
+		/* look for "done" in the buffer to stop looping, otherwise write to file */
+		if(header_s.find("done") != string::npos) {
+			write_done = true;
+			cout << "received 'done'" << endl;
+		} else {
+			cout << "received packet " << header_s << endl;
+			int seq_num = stoi(header_s);
+			if((seq_num == 20 && lost_ack_count < 1) || (seq_num == 50 && lost_ack_count < 1)) {
+				cout << ack << " not sent" << endl;
+				lost_ack_count++;
+			} else {
+				/* send ack and write buffer to file */
+				// cout << "bytes received: " << bytes_rcvd << endl;
+
+				if(seq_num == expected_seq_num) {
+					bytes_sent = sendto(this->sockfd,
+						ack.c_str(),
+						ack.length(),
+						0,
+						(struct sockaddr *) &this->conn_info.client_addr,
+						this->conn_info.addr_size
+					);
+					if(bytes_sent == -1) {
+						perror("sendto");
+						continue;
+					}
+
+					cout << "sent ack " << header_s << endl;
+
+					bytes_written = fwrite(data, 1, bytes_rcvd - sizeof(header), file);
+
+					this->conn_info.total_bytes_written += bytes_written;
+					this->conn_info.packets_rcvd++;
+					expected_seq_num++;
+					last_ack = ack;
+
+					lost_ack_count = 0;
+				} else {
+					bytes_sent = sendto(this->sockfd,
+						last_ack.c_str(),
+						last_ack.length(),
+						0,
+						(struct sockaddr *) &this->conn_info.client_addr,
+						this->conn_info.addr_size
+					);
+					if(bytes_sent == -1) {
+						perror("sendto");
+						continue;
+					}
+				}
+			}
+		}
+
+	}
+
+	return 0;
+}
+
+int Server::selective_repeat() {
 	return 0;
 }
 

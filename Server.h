@@ -9,10 +9,22 @@
 #include <cstring>
 #include <stdio.h>
 #include <filesystem>
+#include <poll.h>
 
-#include "utils.h"
+#include "StopAndWait.h"
 
 using namespace std;
+
+typedef struct connection_info {
+	struct sockaddr_storage client_addr;
+	socklen_t addr_size;
+	int packet_size;
+	int header_len;
+	int protocol;
+	int errors;
+	int total_bytes_written;
+	int packets_rcvd;
+} connection_info;
 
 class Server {
 	public:
@@ -21,17 +33,16 @@ class Server {
 		struct addrinfo *address_info;
 		int sockfd;
 
-		int packet_size;
-		int protocol;
-		int header_len;
-		int errors;
+		connection_info conn_info;
 
 		Server(string port, int backlog);
 		~Server();
 		void start_server();
 		void handle_connections();
 		int handshake();
-		int runProtocol();
+		int stop_and_wait(FILE* file);
+		int go_back_n(FILE* file);
+		int selective_repeat();
 		int close_server();
 };
 
