@@ -87,6 +87,33 @@ int Client::get_current_time() {
 	return chrono::duration_cast<chrono::milliseconds>(chrono::system_clock::now().time_since_epoch()).count();
 }
 
+Frame Client::getNextFrame(FILE* file, bool* read_done, int packets_sent) {
+	unsigned char frame_data[this->user.packet_size];
+	memset(frame_data, 0, this->user.packet_size);
+
+	/* read a frame from the file */
+	/* fread returns packet_size on success */
+	/* fread returns less than packet_size if EOF or error */
+	int bytes_read = fread(frame_data, 1, this->user.packet_size, file);
+	if(bytes_read < this->user.packet_size && this->user.packet_size != 0) {
+		if(ferror(file) != 0) {		/* error */
+			perror("fread");
+			exit(1);
+		}
+		if(feof(file) != 0) {	/* end of file = true */
+			cout << "end of file caught" << endl;
+			fclose(file);
+			*read_done = true;
+		}
+	}
+
+	vector<unsigned char> data;
+	for(int i = 0; i < bytes_read; i++) {
+		data.push_back(frame_data[i]);
+	}
+	return Frame(packets_sent, data, this->user.header_len);
+}
+
 // int Client::runProtocol() {
 // 	StopAndWait s = StopAndWait(this);
 // 	s.send();

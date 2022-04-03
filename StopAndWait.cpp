@@ -27,7 +27,7 @@ int StopAndWait::send() {
 	Frame f = Frame();
 	while(!read_done) {
 		if(!resend) {
-			f = getNextFrame(file, &read_done);
+			f = this->client.getNextFrame(file, &read_done, this->packets_sent);
 		}
 
 		/* package frame for delivery */
@@ -92,33 +92,6 @@ int StopAndWait::send() {
 	cout << "total bytes sent to server: " << this->total_bytes_sent << endl;
 
 	return 0;
-}
-
-Frame StopAndWait::getNextFrame(FILE* file, bool* read_done) {
-	unsigned char frame_data[this->client.user.packet_size];
-	memset(frame_data, 0, this->client.user.packet_size);
-
-	/* read a frame from the file */
-	/* fread returns packet_size on success */
-	/* fread returns less than packet_size if EOF or error */
-	int bytes_read = fread(frame_data, 1, this->client.user.packet_size, file);
-	if(bytes_read < this->client.user.packet_size && this->client.user.packet_size != 0) {
-		if(ferror(file) != 0) {		/* error */
-			perror("fread");
-			exit(1);
-		}
-		if(feof(file) != 0) {	/* end of file = true */
-			cout << "end of file caught" << endl;
-			fclose(file);
-			*read_done = true;
-		}
-	}
-
-	vector<unsigned char> data;
-	for(int i = 0; i < bytes_read; i++) {
-		data.push_back(frame_data[i]);
-	}
-	return Frame(this->packets_sent, data, this->client.user.header_len);
 }
 
 bool StopAndWait::receive_ack(int send_time) {

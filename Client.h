@@ -12,6 +12,7 @@
 #include <stdio.h>
 #include <vector>
 #include <stdlib.h>
+#include "Frame.h"
 
 using namespace std;
 
@@ -40,6 +41,7 @@ class Client {
 		int disconnect();
 		int handshake();
 		int get_current_time();
+		Frame getNextFrame(FILE* file, bool* read_done, int packets_sent);
 };
 
 #endif

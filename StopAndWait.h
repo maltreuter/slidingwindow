@@ -6,7 +6,6 @@
 #include <poll.h>
 
 #include "Client.h"
-#include "Frame.h"
 
 using namespace std;
 
@@ -21,7 +20,6 @@ class StopAndWait {
 		~StopAndWait();
 
 		int send();
-		Frame getNextFrame(FILE* file, bool* read_done);
 		bool receive_ack(int send_time);
 		int receive();
 };
