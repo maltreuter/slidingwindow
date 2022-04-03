@@ -12,11 +12,14 @@ class Frame {
 		int seq_num;
 		vector<unsigned char> data;
 		int header_len;
+		bool timer_running;
+		int timer_time;
+		bool acked;
 
 		Frame(int seq_num, vector<unsigned char> data, int header_len);
 		Frame();
 		~Frame();
-		
+
 		string padSeqNum();
 		string to_string();
 };
