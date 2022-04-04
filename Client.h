@@ -26,6 +26,7 @@ typedef struct user_input {
 	int errors;
 	int protocol;
 	int header_len;
+	vector<int> lost_packets;
 } user_input;
 
 class Client {

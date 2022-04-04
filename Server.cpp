@@ -56,8 +56,13 @@ void Server::handle_connections() {
 		string file_path = "./out" + to_string(loop);
 		FILE *file = fopen(file_path.c_str(), "wb");
 
-		// stop_and_wait(file);
-		go_back_n(file);
+		if(this->conn_info.protocol == 0) {
+			stop_and_wait(file);
+		} else if(this->conn_info.protocol == 1) {
+			go_back_n(file);
+		} else if(this->conn_info.protocol == 2) {
+			selective_repeat(file);
+		}
 
 		fclose(file);
 
@@ -107,11 +112,23 @@ int Server::handshake() {
 
 	this->conn_info.header_len = atoi(header_len);
 
-	/* Receive protocol and errors */
+	/* receive protocol */
+	char protocol[8];
+	bytes_rcvd = recvfrom(this->sockfd, protocol, 7, 0, (struct sockaddr *) &this->conn_info.client_addr, &this->conn_info.addr_size);
+	if(bytes_rcvd == -1) {
+		perror("recvfrom");
+		exit(1);
+	}
+	protocol[bytes_rcvd] = '\0';
+
+	this->conn_info.protocol = atoi(protocol);
+
+	/* Receive errors */
 	return 0;
 }
 
 int Server::stop_and_wait(FILE* file) {
+	cout << "Running Stop and Wait protocol..." << endl;
 	/* open file to write */
 	string ack;
 
@@ -193,6 +210,8 @@ int Server::stop_and_wait(FILE* file) {
 }
 
 int Server::go_back_n(FILE* file) {
+	cout << "Running Go-Back-N protocol..." << endl;
+
 	string ack;
 	bool write_done = false;
 	int expected_seq_num = 0;
@@ -290,7 +309,8 @@ int Server::go_back_n(FILE* file) {
 	return 0;
 }
 
-int Server::selective_repeat() {
+int Server::selective_repeat(FILE* file) {
+	cout << "Running Selective Repeat protocol..." << endl;
 	return 0;
 }
 

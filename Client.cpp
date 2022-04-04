@@ -12,7 +12,8 @@ Client::Client() {
 		-1, /* window size */
 		-1, /* situational errors */
 		-1, /* protocol */
-		8
+		8, /* header length */
+		vector<int>() /* lost packets */
 	};
 
 	this->sockfd = -1;
@@ -80,6 +81,20 @@ int Client::handshake() {
 		perror("sendto");
 		return -1;
 	}
+
+	/* send protocol to server */
+	bytes_sent = sendto(this->sockfd,
+	to_string(this->user.protocol).c_str(),
+	to_string(this->user.protocol).length(),
+	0,
+	this->server_addr,
+	this->server_addr_len
+	);
+	if(bytes_sent == -1) {
+		perror("sendto");
+		return -1;
+	}
+
 	return 0;
 }
 

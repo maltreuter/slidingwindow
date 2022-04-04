@@ -6,6 +6,25 @@
 
 using namespace std;
 
+vector<int> get_lost_packets();
+
+vector<int> get_lost_packets() {
+	vector<int> lost_packets = vector<int>();
+
+	while(true) {
+		cout << "Enter a packet to lose or q to stop." << endl;
+		string input;
+		cin >> input;
+
+		if(input == "q") {
+			break;
+		}
+		lost_packets.push_back(stoi(input));
+	}
+
+	return lost_packets;
+}
+
 int main(int argc, char *argv[]) {
 	Client c = Client();
 
@@ -43,6 +62,15 @@ int main(int argc, char *argv[]) {
 
 		cout << "Enter situational errors (0 - None, 1 - Random, 2 - User Spec): ";
 		cin >> c.user.errors;
+	}
+
+	if(c.user.errors == 2) {
+		c.user.lost_packets = get_lost_packets();
+		cout << "[";
+		for(int i = 0; i < (int) c.user.lost_packets.size(); i++) {
+			cout << c.user.lost_packets[i] << " ";
+		}
+		cout << "]" << endl;
 	}
 
 	cout << "Enter protocol (0 - Stop and Wait, 1 - Go-Back-N, 2 - Selective Repeat): ";

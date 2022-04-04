@@ -42,7 +42,7 @@ class Server {
 		int handshake();
 		int stop_and_wait(FILE* file);
 		int go_back_n(FILE* file);
-		int selective_repeat();
+		int selective_repeat(FILE* file);
 		int close_server();
 };
 
