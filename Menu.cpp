@@ -2,6 +2,7 @@
 
 #include "StopAndWait.h"
 #include "GoBackN.h"
+#include "SelectiveRepeat.h"
 
 using namespace std;
 
@@ -21,7 +22,6 @@ int main(int argc, char *argv[]) {
 		c.user.timeout_int = 5000;
 		c.user.window_size = 8;
 		c.user.errors = 0;
-		c.user.protocol = 0;
 	} else {
 		cout << "Enter file to send: ";
 		cin >> c.user.file_path;
@@ -43,17 +43,25 @@ int main(int argc, char *argv[]) {
 
 		cout << "Enter situational errors (0 - None, 1 - Random, 2 - User Spec): ";
 		cin >> c.user.errors;
-
-		cout << "Enter protocol (0 - Stop and wait, 1 - Go-Back-N, 2 - Selective Repeat): ";
-		cin >> c.user.protocol;
-		/* end menu */
 	}
+
+	cout << "Enter protocol (0 - Stop and Wait, 1 - Go-Back-N, 2 - Selective Repeat): ";
+	cin >> c.user.protocol;
+	/* end menu */
 
 	/* reminder to check errors */
 	c.connect();
 	c.handshake();
-	// StopAndWait p = StopAndWait(c);
-	GoBackN p = GoBackN(c);
-	p.send();
+	if(c.user.protocol == 0) {
+		StopAndWait s = StopAndWait(c);
+		s.send();
+	} else if(c.user.protocol == 1) {
+		GoBackN g = GoBackN(c);
+		g.send();
+	} else if(c.user.protocol == 2) {
+		//selective repeat
+	} else {
+		cout << "Not a valid protocol. Disconnecting." << endl;
+	}
 	c.disconnect();
 }

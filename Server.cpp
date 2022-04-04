@@ -118,7 +118,6 @@ int Server::stop_and_wait(FILE* file) {
 	bool write_done = false;
 
 	int lost_ack_count = 0;
-	int acks_sent = 0;
 
 	int bytes_rcvd;
 	int bytes_written;
@@ -161,8 +160,9 @@ int Server::stop_and_wait(FILE* file) {
 			ack = "ack" + header_s;
 			// cout << "bytes received: " << bytes_rcvd << endl;
 
-			// this should "lose" ack 20 twice and ack 50 once
-			if((acks_sent == 20 && lost_ack_count < 2) || (acks_sent == 50 && lost_ack_count < 1)) {
+			int seq_num = stoi(header_s);
+			// this should "lose" ack 20 and ack 50
+			if((seq_num == 20 && lost_ack_count < 1) || (seq_num == 50 && lost_ack_count < 1)) {
 				cout << ack << " not sent" << endl;
 				lost_ack_count++;
 			} else {
@@ -184,7 +184,6 @@ int Server::stop_and_wait(FILE* file) {
 
 				this->conn_info.total_bytes_written += bytes_written;
 				this->conn_info.packets_rcvd++;
-				acks_sent++;
 				lost_ack_count = 0;
 			}
 		}

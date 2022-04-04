@@ -37,22 +37,9 @@ int SelectiveRepeat::send() {
 				current_window.push_back(f);
 				next_seq_num++;
 
-				/* package and send frame */
-				int buffer_size = this->client.user.header_len + this->client.user.packet_size + 1;
-				unsigned char curr_frame[buffer_size];
-				memcpy(curr_frame, f.padSeqNum().c_str(), this->client.user.header_len + 1);
-				memcpy(curr_frame + this->client.user.header_len + 1, f.data.data(), this->client.user.packet_size);
+				bytes_sent = this->client.send_frame(f);
 
-				/* send current frame */
-				bytes_sent = sendto(this->client.sockfd,
-					curr_frame,
-					this->client.user.header_len + 1 + f.data.size(),
-					0,
-					this->client.server_addr,
-					this->client.server_addr_len
-				);
 				if(bytes_sent == -1) {
-					perror("sendto");
 					continue;
 				}
 
@@ -81,6 +68,7 @@ int SelectiveRepeat::send() {
 				send_base++;
 				current_window.erase(current_window.begin());
 			}
+
 		} else if (ack_num >= 0 && nak) {
 			Frame resend;
 			for(int i = 0; i < current_window.size(); i++) {
@@ -91,27 +79,15 @@ int SelectiveRepeat::send() {
 					break;
 				}
 			}
+			
+			bytes_sent = this->client.send_frame(resend);
 
-			/* package and send frame */
-			int buffer_size = this->client.user.header_len + this->client.user.packet_size + 1;
-			unsigned char curr_frame[buffer_size];
-			memcpy(curr_frame, resend.padSeqNum().c_str(), this->client.user.header_len + 1);
-			memcpy(curr_frame + this->client.user.header_len + 1, resend.data.data(), this->client.user.packet_size);
-
-			/* send current frame */
-			bytes_sent = sendto(this->client.sockfd,
-				curr_frame,
-				this->client.user.header_len + 1 + resend.data.size(),
-				0,
-				this->client.server_addr,
-				this->client.server_addr_len
-			);
 			if(bytes_sent == -1) {
 				perror("sendto");
 				continue;
 			}
 
-			cout << "sent packet " << resend.seq_num << endl;
+			cout << "resent packet " << resend.seq_num << endl;
 
 			this->total_bytes_sent += bytes_sent;
 		}
@@ -122,26 +98,14 @@ int SelectiveRepeat::send() {
 			if(current_window[i].timer_running && current_time - current_window[i].timer_time > this->client.user.timeout_int) {
 				Frame resend = current_window[i];
 				resend.timer_time = current_time;
-				/* package and send frame */
-				int buffer_size = this->client.user.header_len + this->client.user.packet_size + 1;
-				unsigned char curr_frame[buffer_size];
-				memcpy(curr_frame, resend.padSeqNum().c_str(), this->client.user.header_len + 1);
-				memcpy(curr_frame + this->client.user.header_len + 1, resend.data.data(), this->client.user.packet_size);
+				
+				bytes_sent = this->client.send_frame(resent);
 
-				/* send current frame */
-				bytes_sent = sendto(this->client.sockfd,
-					curr_frame,
-					this->client.user.header_len + 1 + resend.data.size(),
-					0,
-					this->client.server_addr,
-					this->client.server_addr_len
-				);
 				if(bytes_sent == -1) {
-					perror("sendto");
 					continue;
 				}
 
-				cout << "sent packet " << resend.seq_num << endl;
+				cout << "resent packet " << resend.seq_num << endl;
 
 				this->total_bytes_sent += bytes_sent;
 			}

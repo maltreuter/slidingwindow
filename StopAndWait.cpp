@@ -24,33 +24,25 @@ int StopAndWait::send() {
 
 	bool read_done = false;
 	bool resend = false;
+
+	/* to store previous frame for resending if necessary */
 	Frame f = Frame();
+
 	while(!read_done) {
 		if(!resend) {
 			f = this->client.getNextFrame(file, &read_done, this->packets_sent);
 		}
 
-		/* package frame for delivery */
-		int buffer_size = this->client.user.header_len + this->client.user.packet_size + 1;
-		unsigned char curr_frame[buffer_size];
-		memcpy(curr_frame, f.padSeqNum().c_str(), this->client.user.header_len + 1);
-		memcpy(curr_frame + this->client.user.header_len + 1, f.data.data(), this->client.user.packet_size);
-
 		int send_time = this->client.get_current_time();
 
 		/* send current frame */
-		bytes_sent = sendto(this->client.sockfd,
-			curr_frame,
-			this->client.user.header_len + 1 + f.data.size(),
-			0,
-			this->client.server_addr,
-			this->client.server_addr_len
-		);
+		bytes_sent = this->client.send_frame(f);
+
 		if(bytes_sent == -1) {
-			perror("sendto");
 			resend = true;
 			continue;
 		}
+
 		this->total_bytes_sent += bytes_sent;
 
 		if(resend) {
@@ -60,6 +52,7 @@ int StopAndWait::send() {
 		}
 
 		resend = receive_ack(send_time);
+
 		if(!resend) {
 			frames.push_back(f);
 			this->total_bytes_read += f.data.size();

@@ -41,22 +41,9 @@ int GoBackN::send() {
 				current_window.push(f);
 				next_seq_num++;
 
-				/* package and send frame */
-				int buffer_size = this->client.user.header_len + this->client.user.packet_size + 1;
-				unsigned char curr_frame[buffer_size];
-				memcpy(curr_frame, f.padSeqNum().c_str(), this->client.user.header_len + 1);
-				memcpy(curr_frame + this->client.user.header_len + 1, f.data.data(), this->client.user.packet_size);
+				bytes_sent = this->client.send_frame(f);
 
-				/* send current frame */
-				bytes_sent = sendto(this->client.sockfd,
-					curr_frame,
-					this->client.user.header_len + 1 + f.data.size(),
-					0,
-					this->client.server_addr,
-					this->client.server_addr_len
-				);
 				if(bytes_sent == -1) {
-					perror("sendto");
 					continue;
 				}
 
@@ -67,6 +54,8 @@ int GoBackN::send() {
 		}
 
 		int ack_num = receive_ack();
+
+		/* if we've received an ack for the last frame: done */
 		if(ack_num == last_frame_num) {
 			break;
 		}
@@ -92,22 +81,10 @@ int GoBackN::send() {
 			while(!tmp.empty()) {
 				Frame resend = tmp.front();
 				tmp.pop();
-				/* package and send frame */
-				int buffer_size = this->client.user.header_len + this->client.user.packet_size + 1;
-				unsigned char curr_frame[buffer_size];
-				memcpy(curr_frame, resend.padSeqNum().c_str(), this->client.user.header_len + 1);
-				memcpy(curr_frame + this->client.user.header_len + 1, resend.data.data(), this->client.user.packet_size);
+				
+				bytes_sent = this->client.send_frame(resend);
 
-				/* send current frame */
-				bytes_sent = sendto(this->client.sockfd,
-					curr_frame,
-					this->client.user.header_len + 1 + resend.data.size(),
-					0,
-					this->client.server_addr,
-					this->client.server_addr_len
-				);
 				if(bytes_sent == -1) {
-					perror("sendto");
 					continue;
 				}
 

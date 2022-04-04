@@ -114,25 +114,25 @@ Frame Client::getNextFrame(FILE* file, bool* read_done, int packets_sent) {
 	return Frame(packets_sent, data, this->user.header_len);
 }
 
-// int Client::runProtocol() {
-// 	StopAndWait s = StopAndWait(this);
-// 	s.send();
-// 	return 0;
-// }
+int Client::send_frame(Frame f) {
+	/* package frame for delivery */
+	int buffer_size = this->user.header_len + this->user.packet_size + 1;
+	unsigned char curr_frame[buffer_size];
+	memcpy(curr_frame, f.padSeqNum().c_str(), this->user.header_len + 1);
+	memcpy(curr_frame + this->user.header_len + 1, f.data.data(), this->user.packet_size);
 
-// int main(int argc, char *argv[]) {
-// 	if(argc != 4) {
-// 		cout << "Usage: ./client <host> <port> <path_to_file>" << endl;
-// 		exit(1);
-// 	}
-//
-// 	//menu variables
+	/* send frame */
+	int bytes_sent = sendto(this->sockfd,
+		curr_frame,
+		this->user.header_len + 1 + f.data.size(),
+		0,
+		this->server_addr,
+		this->server_addr_len
+	);
 
-//
-//
-// 	Client c = Client(argv[1], argv[2]);
-// 	c.connect();
-// 	c.send_file(argv[3]);
-//
-// 	get_md5(filesystem::path(argv[3]));
-// }
+	if(bytes_sent == -1) {
+		perror("sendto");
+	}
+
+	return bytes_sent;
+}

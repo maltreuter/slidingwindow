@@ -42,6 +42,7 @@ class Client {
 		int handshake();
 		int get_current_time();
 		Frame getNextFrame(FILE* file, bool* read_done, int packets_sent);
+		int send_frame(Frame f);
 };
 
 #endif
