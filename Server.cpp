@@ -87,8 +87,13 @@ int Server::handshake() {
 		0,
 		0,
 		0,
-		0
+		0,
+		0,
+		vector<int>()
 	};
+
+	this->conn_info.lost_acks.push_back(20);
+	this->conn_info.lost_acks.push_back(50);
 
 	/* receive packet size from user input in the client */
 	char packet_size[8];
@@ -134,8 +139,6 @@ int Server::stop_and_wait(FILE* file) {
 
 	bool write_done = false;
 
-	int lost_ack_count = 0;
-
 	int bytes_rcvd;
 	int bytes_written;
 	int bytes_sent;
@@ -179,9 +182,10 @@ int Server::stop_and_wait(FILE* file) {
 
 			int seq_num = stoi(header_s);
 			// this should "lose" ack 20 and ack 50
-			if((seq_num == 20 && lost_ack_count < 1) || (seq_num == 50 && lost_ack_count < 1)) {
+			vector<int>::iterator position = find(this->conn_info.lost_acks.begin(), this->conn_info.lost_acks.end(), seq_num);
+			if(position != this->conn_info.lost_acks.end()) {
 				cout << ack << " not sent" << endl;
-				lost_ack_count++;
+				this->conn_info.lost_acks.erase(position);
 			} else {
 				bytes_sent = sendto(this->sockfd,
 					ack.c_str(),
@@ -201,7 +205,6 @@ int Server::stop_and_wait(FILE* file) {
 
 				this->conn_info.total_bytes_written += bytes_written;
 				this->conn_info.packets_rcvd++;
-				lost_ack_count = 0;
 			}
 		}
 	}
@@ -220,8 +223,6 @@ int Server::go_back_n(FILE* file) {
 	int bytes_rcvd;
 	int bytes_written;
 	int bytes_sent;
-
-	int lost_ack_count = 0;
 
 	while(!write_done) {
 		char buffer[this->conn_info.packet_size + this->conn_info.header_len + 1];
@@ -258,9 +259,10 @@ int Server::go_back_n(FILE* file) {
 		} else {
 			cout << "received packet " << header_s << endl;
 			int seq_num = stoi(header_s);
-			if((seq_num == 20 && lost_ack_count < 1) || (seq_num == 50 && lost_ack_count < 1)) {
+			vector<int>::iterator position = find(this->conn_info.lost_acks.begin(), this->conn_info.lost_acks.end(), seq_num);
+			if(position != this->conn_info.lost_acks.end()) {
 				cout << ack << " not sent" << endl;
-				lost_ack_count++;
+				this->conn_info.lost_acks.erase(position);
 			} else {
 				/* send ack and write buffer to file */
 				// cout << "bytes received: " << bytes_rcvd << endl;
@@ -287,7 +289,6 @@ int Server::go_back_n(FILE* file) {
 					expected_seq_num++;
 					last_ack = ack;
 
-					lost_ack_count = 0;
 				} else {
 					bytes_sent = sendto(this->sockfd,
 						last_ack.c_str(),

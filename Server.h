@@ -10,8 +10,8 @@
 #include <stdio.h>
 #include <filesystem>
 #include <poll.h>
-
-#include "StopAndWait.h"
+#include <vector>
+#include <algorithm>
 
 using namespace std;
 
@@ -24,6 +24,7 @@ typedef struct connection_info {
 	int errors;
 	int total_bytes_written;
 	int packets_rcvd;
+	vector<int> lost_acks;
 } connection_info;
 
 class Server {
