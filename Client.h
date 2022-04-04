@@ -12,6 +12,7 @@
 #include <stdio.h>
 #include <vector>
 #include <stdlib.h>
+#include <algorithm>
 #include "Frame.h"
 
 using namespace std;

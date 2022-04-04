@@ -35,20 +35,28 @@ int StopAndWait::send() {
 
 		int send_time = this->client.get_current_time();
 
-		/* send current frame */
-		bytes_sent = this->client.send_frame(f);
+		vector<int>::iterator position = find(this->client.user.lost_packets.begin(), this->client.user.lost_packets.end(), f.seq_num);
+		if(position == this->client.user.lost_packets.end()){
+			/* lost_packets does not contain f.seq_num */ 
+			/* send current frame */
+			bytes_sent = this->client.send_frame(f);
 
-		if(bytes_sent == -1) {
-			resend = true;
-			continue;
-		}
+			if(bytes_sent == -1) {
+				resend = true;
+				continue;
+			}
 
-		this->total_bytes_sent += bytes_sent;
+			this->total_bytes_sent += bytes_sent;
 
-		if(resend) {
-			cout << "resent packet " << f.seq_num << endl;
+			if(resend) {
+				cout << "resent packet " << f.seq_num << endl;
+			} else {
+				cout << "sent packet " << f.seq_num << endl;
+			}
 		} else {
-			cout << "sent packet " << f.seq_num << endl;
+			/* lose this packet and remove it from lost_packets */
+			cout << "Packet " << f.seq_num << " lost." << endl;
+			this->client.user.lost_packets.erase(position);
 		}
 
 		resend = receive_ack(send_time);
