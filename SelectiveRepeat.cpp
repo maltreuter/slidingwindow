@@ -79,7 +79,7 @@ int SelectiveRepeat::send() {
 					break;
 				}
 			}
-			
+
 			bytes_sent = this->client.send_frame(resend);
 
 			if(bytes_sent == -1) {
@@ -98,7 +98,7 @@ int SelectiveRepeat::send() {
 			if(current_window[i].timer_running && current_time - current_window[i].timer_time > this->client.user.timeout_int) {
 				Frame resend = current_window[i];
 				resend.timer_time = current_time;
-				
+
 				bytes_sent = this->client.send_frame(resent);
 
 				if(bytes_sent == -1) {
@@ -163,9 +163,14 @@ int SelectiveRepeat::receive_ack(bool* nak) {
 			perror("recvfrom");
 		}
 
+		string ack_or_nak = string(ack).substr(0, 3);
+		if(ack_or_nak.compare("nak") == 0) {
+			*nak = true;
+		}
+
 		/* split seq_num */
 		string ack_num = string(ack).substr(3, this->client.user.header_len);
-		cout << "ack " << ack_num << " received" << endl;
+		cout << ack_or_nak << " " << ack_num << " received" << endl;
 
 		this->packets_sent++;
 

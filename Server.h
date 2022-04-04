@@ -20,6 +20,7 @@ typedef struct connection_info {
 	socklen_t addr_size;
 	int packet_size;
 	int header_len;
+	int window_size;
 	int protocol;
 	int errors;
 	int total_bytes_written;

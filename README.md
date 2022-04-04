@@ -28,3 +28,7 @@ make clean
 - [ ] Stop and Wait
 - [ ] Go-Back-N
 - [ ] Selective Repeat
+- [ ] send ack method
+- [ ] split header method
+- [ ] receive frame method
+- [ ] handshake

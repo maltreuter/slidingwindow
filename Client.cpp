@@ -95,6 +95,10 @@ int Client::handshake() {
 		return -1;
 	}
 
+	/* send errors */
+
+	/* send window size */
+
 	return 0;
 }
 

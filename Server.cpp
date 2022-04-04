@@ -2,6 +2,10 @@
 
 using namespace std;
 
+bool sort_frame(Frame a, Frame b) {
+	return a.seq_num < b.seq_num;
+}
+
 Server::Server(string port, int backlog) {
 	this->port = port;
 	this->backlog = backlog;
@@ -129,6 +133,9 @@ int Server::handshake() {
 	this->conn_info.protocol = atoi(protocol);
 
 	/* Receive errors */
+
+	/* Receive window size */
+
 	return 0;
 }
 
@@ -312,6 +319,77 @@ int Server::go_back_n(FILE* file) {
 
 int Server::selective_repeat(FILE* file) {
 	cout << "Running Selective Repeat protocol..." << endl;
+
+	Frame f = Frame();
+	int recv_base = 0;
+	bool sent_neg_ack = false;
+
+	vector<Frame> window;
+
+	bool write_done = false;
+	while(!write_done) {
+		char buffer[this->conn_info.packet_size + this->conn_info.header_len + 1];
+		memset(buffer, 0, this->conn_info.packet_size + this->conn_info.header_len + 1);
+
+		bytes_rcvd = recvfrom(this->sockfd,
+			buffer,
+			this->conn_info.packet_size + this->conn_info.header_len + 1,
+			0,
+			(struct sockaddr *) &this->conn_info.client_addr,
+			&this->conn_info.addr_size
+		);
+		if(bytes_rcvd == -1) {
+			perror("recvfrom");
+			continue;
+		}
+		// cout << "sizeof buffer: " << sizeof(buffer) << endl;
+
+		/* parse out header */
+		unsigned char header[this->conn_info.header_len + 1];
+		unsigned char data[this->conn_info.packet_size];
+		memcpy(header, buffer, this->conn_info.header_len + 1);
+		memcpy(data, buffer + this->conn_info.header_len + 1, this->conn_info.packet_size);
+
+		string header_s(header, header + sizeof(header));
+		ack = "ack" + header_s;
+
+		if(header_s.find("done") != string::npos) {
+			write_done = true;
+			cout << "received 'done'" << endl;
+		} else {
+			cout << "received packet " << header_s << endl;
+			int seq_num = stoi(header_s);
+			f = Frame(seq_num, data, this->conn_info.header_len);
+
+			/* packet not damaged and in current window */
+			if(f.seq_num >= recv_base && f.seq_num < (recv_base + this->conn_info.window_size)) {
+				/* send ack */
+
+				/* packet is smallest in window and can be written */
+				if(f.seq_num == recv_base) {
+					/* write */
+					recv_base++;
+					/* check other out of order frames */
+					for(int i = 0; i < window.size(); i++) {
+						if(window[i].seq_num == recv_base) {
+							/* write */
+							recv_base++;
+							window.erase(window.begin() + i);
+							i--;
+						}
+					}
+				} else {
+					window.push_back(f);
+					sort(window.begin(), window.end(), sort_frame);
+				}
+
+				/* if checksum == false, packet is corrupted */
+			} else if() {
+				string nak = "nak" + header_s;
+				/* send nak */
+			}
+	}
+
 	return 0;
 }
 
