@@ -40,16 +40,24 @@ int GoBackN::send() {
 				}
 				current_window.push(f);
 				next_seq_num++;
+				
+				vector<int>::iterator position = find(this->client.user.lost_packets.begin(), this->client.user.lost_packets.end(), f.seq_num);
+				if(position == this->client.user.lost_packets.end()) {
+					/* lost_packets does not contain f.seq_num */
+					/* send current frame */
+					bytes_sent = this->client.send_frame(f);
 
-				bytes_sent = this->client.send_frame(f);
+					if(bytes_sent == -1) {
+						continue;
+					}
 
-				if(bytes_sent == -1) {
-					continue;
+					cout << "sent packet " << f.seq_num << endl;
+
+					this->total_bytes_sent += bytes_sent;
+				} else {
+					/* lose this packet  */
+					cout << "Packet " << f.seq_num << " lost." << endl;
 				}
-
-				cout << "sent packet " << f.seq_num << endl;
-
-				this->total_bytes_sent += bytes_sent;
 			}
 		}
 
