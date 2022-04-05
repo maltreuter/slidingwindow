@@ -26,6 +26,9 @@ int SelectiveRepeat::send() {
 
 	bool read_done = false;
 	Frame f = Frame();
+	int start_time = this->client.get_current_time();
+	int original_packets = 0;
+	int resent_packets = 0;
 
 	while(true) {
 		/* window not full and frames to be sent */
@@ -38,24 +41,51 @@ int SelectiveRepeat::send() {
 				string data_string(reinterpret_cast<char*>(f.data.data()));
 				f.checksum = this->client.create_checksum(data_string, 8);
 				cout << "checksum: " << f.checksum << endl;
-				bytes_sent = this->client.send_frame(f);
-
-				if(bytes_sent == -1) {
-					continue;
-				}
-
 				current_window.push_back(f);
 				next_seq_num++;
 
-				cout << "sent packet " << f.seq_num << endl;
+				/* lose specific packets */
+				vector<int>::iterator position = find(this->client.user.lost_packets.begin(), this->client.user.lost_packets.end(), f.seq_num);
+				if(position == this->client.user.lost_packets.end()){
+					bytes_sent = this->client.send_frame(f);
 
-				this->total_bytes_sent += bytes_sent;
+					if(bytes_sent == -1) {
+						continue;
+					}
+
+
+					cout << "Packet " << f.seq_num << " sent" << endl;
+
+					this->total_bytes_sent += bytes_sent;
+				} else {
+					/* lose this packet and remove it from lost_packets */
+					cout << "Packet " << f.seq_num << " lost" << endl;
+					this->client.user.lost_packets.erase(position);
+				}
+
+				original_packets++;
+				packets_sent++;
 			}
 		}
 
 		bool nak = false;
 		int ack_num = receive_ack(&nak);
+
+		if(ack_num >= 0) {
+			/* print current window */
+			cout << "Current window = [";
+			for(int i = 0; i < current_window.size(); i++) {
+				if(i == current_window.size() - 1) {
+					cout << current_window[i] << "]" << endl;
+				} else {
+					cout << current_window[i] << ", ";
+				}
+			}
+		}
+
 		if(ack_num >= 0 && !nak) {
+			cout << "Ack " << ack_num << " received" << endl;
+
 			for(int i = 0; i < current_window.size(); i++) {
 				if(current_window[i].seq_num == ack_num) {
 					current_window[i].acked = true;
@@ -74,6 +104,8 @@ int SelectiveRepeat::send() {
 			}
 
 		} else if (ack_num >= 0 && nak) {
+			cout << "Nak " << ack_num << " received" << endl;
+
 			Frame resend;
 			for(int i = 0; i < current_window.size(); i++) {
 				if(current_window[i].seq_num == ack_num) {
@@ -91,16 +123,20 @@ int SelectiveRepeat::send() {
 				continue;
 			}
 
-			cout << "resent packet " << resend.seq_num << endl;
+			cout << "Packet " << resend.seq_num << " retransmitted" << endl;
+			resent_packets++;
+			packets_sent++;
 
 			this->total_bytes_sent += bytes_sent;
 		}
 
-		/* timer shit */
+		/* timer */
 		int current_time = this->client.get_current_time();
 		for(int i = 0; i < current_window.size(); i++) {
 			if(current_window[i].timer_running && current_time - current_window[i].timer_time > this->client.user.timeout_int) {
 				Frame resend = current_window[i];
+				cout << "Packet " << resend.seq_num << " ***** Timed Out *****" << endl;
+
 				resend.timer_time = current_time;
 
 				bytes_sent = this->client.send_frame(resend);
@@ -109,7 +145,9 @@ int SelectiveRepeat::send() {
 					continue;
 				}
 
-				cout << "resent packet " << resend.seq_num << endl;
+				cout << "Packet " << resend.seq_num << " retransmitted" << endl;
+				resent_packets++;
+				packets_sent++;
 
 				this->total_bytes_sent += bytes_sent;
 			}
@@ -145,6 +183,16 @@ int SelectiveRepeat::send() {
 	}
 	this->total_bytes_sent += bytes_sent;
 
+	/* print stats */
+	cout << "\n************************************" << endl;
+	cout << "Sent file: " << this->client.user.file_path << endl;
+	cout << "Number of original packets sent: " << original_packets << endl;
+	cout << "Number of retransmitted packets: " << resent_packets << endl;
+	cout << "Total number of packets sent: " << this->packets_sent << endl;
+	cout << "Total bytes read from file: " << this->total_bytes_read << endl;
+	cout << "Total bytes sent to server: " << this->total_bytes_sent << endl;
+	cout << "Elapsed time: " << this->client.get_current_time() - start_time * 1000 << " seconds";
+
 	return 0;
 }
 
@@ -154,7 +202,7 @@ int SelectiveRepeat::receive_ack(bool* nak) {
 	fds[0].events = POLLIN;
 
 	if(poll(fds, 1, 0) > 0) {
-		/* soemthing to receive */
+		/* something to receive */
 		char ack[3 + this->client.user.header_len / 2];
 		int bytes_rcvd = recvfrom(this->client.sockfd,
 			ack,
@@ -174,9 +222,6 @@ int SelectiveRepeat::receive_ack(bool* nak) {
 
 		/* split seq_num */
 		string ack_num = string(ack).substr(3, this->client.user.header_len / 2);
-		cout << ack_or_nak << " " << ack_num << " received" << endl;
-
-		this->packets_sent++;
 
 		return stoi(ack_num);
 	}

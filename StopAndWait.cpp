@@ -25,9 +25,14 @@ int StopAndWait::send() {
 	bool read_done = false;
 	bool resend = false;
 
+	int original_packets = 0;
+	int resent_packets = 0;
+
 	/* to store previous frame for resending if necessary */
 	Frame f = Frame();
 	int last_frame_num = -2;
+
+	int start_time = this->client.get_current_time();
 
 	while(true) {
 		if(!resend) {
@@ -39,12 +44,12 @@ int StopAndWait::send() {
 
 		int send_time = this->client.get_current_time();
 
+		/* lose specific packets */
 		vector<int>::iterator position = find(this->client.user.lost_packets.begin(), this->client.user.lost_packets.end(), f.seq_num);
 		if(position == this->client.user.lost_packets.end()){
 			/* lost_packets does not contain f.seq_num */
 			/* send current frame */
 			string data_string(reinterpret_cast<char*>(f.data.data()));
-			cout << endl;
 			cout << "data length: " << data_string.length() << endl;
 			f.checksum = this->client.create_checksum(data_string, 8);
 			cout << "checksum: " << f.checksum << endl;
@@ -58,13 +63,15 @@ int StopAndWait::send() {
 			this->total_bytes_sent += bytes_sent;
 
 			if(resend) {
-				cout << "resent packet " << f.seq_num << endl;
+				cout << "Packet " << f.seq_num << " retransmitted" << endl;
+				original_packets++;
 			} else {
-				cout << "sent packet " << f.seq_num << endl;
+				cout << "Packet " << f.seq_num << " sent" << endl;
+				resent_packets++;
 			}
 		} else {
 			/* lose this packet and remove it from lost_packets */
-			cout << "Packet " << f.seq_num << " lost." << endl;
+			cout << "Packet " << f.seq_num << " lost" << endl;
 			this->client.user.lost_packets.erase(position);
 		}
 
@@ -105,11 +112,13 @@ int StopAndWait::send() {
 
 	/* print stats */
 	cout << "\n************************************" << endl;
-	cout << "Sending file: " << this->client.user.file_path << endl;
-	// cout << "md5 sum: " << get_md5(this->client.user.file_path) << endl;
-	cout << "packets sent: " << this->packets_sent << endl;
-	cout << "total bytes read from file: " << this->total_bytes_read << endl;
-	cout << "total bytes sent to server: " << this->total_bytes_sent << endl;
+	cout << "Sent file: " << this->client.user.file_path << endl;
+	cout << "Number of original packets sent: " << original_packets << endl;
+	cout << "Number of retransmitted packets: " << resent_packets << endl;
+	cout << "Total number of packets sent: " << this->packets_sent << endl;
+	cout << "Total bytes read from file: " << this->total_bytes_read << endl;
+	cout << "Total bytes sent to server: " << this->total_bytes_sent << endl;
+	cout << "Elapsed time: " << this->client.get_current_time() - start_time * 1000 << " seconds";
 
 	return 0;
 }
@@ -123,8 +132,7 @@ int StopAndWait::receive_ack(int send_time) {
 	while(true) {
 		int now = this->client.get_current_time();
 		if(now - send_time > this->client.user.timeout_int) {
-			cout << "Timeout: " << now - send_time << endl;
-			cout << "Packet " << this->packets_sent << " timed out" << endl;
+			cout << "Packet " << this->packets_sent << " ***** Timed Out *****" << endl;
 			return -1;
 		} else if(poll(fds, 1, 0) > 0) {
 			/* receive ack */
@@ -143,12 +151,13 @@ int StopAndWait::receive_ack(int send_time) {
 			}
 
 			/* split seq_num */
-			string ack_num = string(ack).substr(3, this->client.user.header_len / 2);
-			cout << "ack " << ack_num << " received" << endl;
+			string ack_num_s = string(ack).substr(3, this->client.user.header_len / 2);
+			int ack_num = stoi(ack_num_s);
+			cout << "Ack " << ack_num << " received" << endl;
 
 			this->packets_sent++;
 
-			return stoi(ack_num);
+			return ack_num;
 		}
 	}
 }

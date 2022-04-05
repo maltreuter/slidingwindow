@@ -30,6 +30,10 @@ int GoBackN::send() {
 	bool read_done = false;
 	Frame f = Frame();
 
+	int original_packets = 0;
+	int resent_packets = 0;
+	int start_time = this->client.get_current_time();
+
 	while(true) {
 		/* window not full and frames to be sent */
 		if(!read_done) {
@@ -46,6 +50,7 @@ int GoBackN::send() {
 				current_window.push(f);
 				next_seq_num++;
 
+				/* lose specific packets */
 				vector<int>::iterator position = find(this->client.user.lost_packets.begin(), this->client.user.lost_packets.end(), f.seq_num);
 				if(position == this->client.user.lost_packets.end()) {
 					/* lost_packets does not contain f.seq_num */
@@ -57,13 +62,18 @@ int GoBackN::send() {
 						continue;
 					}
 
-					cout << "sent packet " << f.seq_num << endl;
+					cout << "Packet " << f.seq_num << " sent" << endl;
 
 					this->total_bytes_sent += bytes_sent;
 				} else {
 					/* lose this packet  */
-					cout << "Packet " << f.seq_num << " lost." << endl;
+					cout << "Packet " << f.seq_num << " lost" << endl;
+					this->client.user.lost_packets.erase(position);
 				}
+
+				/* we still "sent" the packet, it just got lost on the way */
+				original_packets++;
+				this->packets_sent++;
 			}
 		}
 
@@ -73,7 +83,23 @@ int GoBackN::send() {
 		if(ack_num == last_frame_num) {
 			break;
 		}
+
+		/* ack received */
 		if(ack_num >= 0) {
+			/* print current window */
+			cout << "Current window = [";
+			queue<Frame> tmp = current_window;
+			while(!tmp.empty()) {
+				if(tmp.size() == 1) {
+					cout << tmp.front().seq_num << "]" << endl;;
+					tmp.pop();
+				} else {
+					cout << tmp.front() << ", ";
+					tmp.pop();
+				}
+			}
+
+			/* shift window */
 			if(ack_num >= send_base && ack_num < next_seq_num) {
 				while(send_base <= ack_num) {
 					send_base++;
@@ -90,7 +116,7 @@ int GoBackN::send() {
 
 		/* if timer == timeout */
 		if(timer_running && this->client.get_current_time() - timer_time > this->client.user.timeout_int) {
-			cout << "timeout: " << this->client.get_current_time() - timer_time << endl;
+			cout << "***** Timed Out *****";
 			queue<Frame> tmp = current_window;
 			while(!tmp.empty()) {
 				Frame resend = tmp.front();
@@ -102,7 +128,9 @@ int GoBackN::send() {
 					continue;
 				}
 
-				cout << "resent packet " << resend.seq_num << endl;
+				cout << "Packet " << resend.seq_num << " retransmitted" << endl;
+				resent_packets++;
+				this->packets_sent++;
 
 				this->total_bytes_sent += bytes_sent;
 
@@ -126,6 +154,16 @@ int GoBackN::send() {
 		exit(1);
 	}
 	this->total_bytes_sent += bytes_sent;
+
+	/* print stats */
+	cout << "\n************************************" << endl;
+	cout << "Sent file: " << this->client.user.file_path << endl;
+	cout << "Number of original packets sent: " << original_packets << endl;
+	cout << "Number of retransmitted packets: " << resent_packets << endl;
+	cout << "Total number of packets sent: " << this->packets_sent << endl;
+	cout << "Total bytes read from file: " << this->total_bytes_read << endl;
+	cout << "Total bytes sent to server: " << this->total_bytes_sent << endl;
+	cout << "Elapsed time: " << this->client.get_current_time() - start_time * 1000 << " seconds";
 
 	return 0;
 }
@@ -152,8 +190,6 @@ int GoBackN::receive_ack() {
 		/* split seq_num */
 		string ack_num = string(ack).substr(3, this->client.user.header_len / 2);
 		cout << "ack " << ack_num << " received" << endl;
-
-		this->packets_sent++;
 
 		return stoi(ack_num);
 	}
