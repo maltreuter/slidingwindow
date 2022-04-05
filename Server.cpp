@@ -240,6 +240,8 @@ int Server::stop_and_wait(FILE* file) {
 		} else {
 			cout << "Checksum failed" << endl;
 		}
+
+		cout << endl;
 	}
 
 	return 0;
@@ -553,8 +555,8 @@ bool Server::check_checksum(string checksum, string data, int blockSize) {
         }
     }
 
-    //cout << "\nChecksum: " << checksum << endl;;
-    //cout << "\nRecvString: " << binaryString << endl;
+    cout << "checksum: " << checksum << endl;
+    cout << "recvstring: " << binaryString << endl;
 
     for (int n = blockSize - 1; n >= 0; n--) {
         currentSum = currentSum + (checksum[n] - '0') + (binaryString[n] - '0');
@@ -567,8 +569,10 @@ bool Server::check_checksum(string checksum, string data, int blockSize) {
             currentSum = currentCarry;
         }
     }
-    //cout << "\n" << recvSum;
-    if (count(recvSum.begin(), recvSum.end(), '1') == blockSize) {
+
+	cout << "result: " << recvSum << endl;
+
+	if (count(recvSum.begin(), recvSum.end(), '1') == blockSize) {
         return true;
     } else {
         return false;

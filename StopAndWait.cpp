@@ -91,6 +91,8 @@ int StopAndWait::send() {
 		if(read_done && ack_num == last_frame_num) {
 			break;
 		}
+
+		cout << endl;
 	}
 
 	/* tell the server we are done sending frames */
