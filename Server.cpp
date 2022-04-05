@@ -86,7 +86,7 @@ void Server::handle_connections() {
 }
 
 int Server::handshake() {
-	struct sockaddr_storage client_addr;
+	struct sockaddr_storage client_addr = {0};
 	this->conn_info = {
 		client_addr,
 		sizeof(client_addr),
@@ -176,12 +176,12 @@ int Server::stop_and_wait(FILE* file) {
 			(struct sockaddr *) &this->conn_info.client_addr,
 			&this->conn_info.addr_size
 		);
-		
+
 		if(bytes_rcvd == -1) {
 			perror("recvfrom");
 			continue;
 		}
-		
+
 		/* parse out header */
 		unsigned char header[this->conn_info.header_len];
 		unsigned char data[bytes_rcvd - this->conn_info.header_len];
@@ -468,7 +468,7 @@ int Server::selective_repeat(FILE* file) {
 				/* send nak */
 				cout << "Nak " << seq_num << " sent" << endl;;
 			}
-			
+
 			if(!write_done) {
 				/* print current window */
 				cout << "Current window = [";
