@@ -146,7 +146,7 @@ Frame Client::getNextFrame(FILE* file, bool* read_done, int packets_sent) {
 
 int Client::send_frame(Frame f) {
 	/* package frame for delivery */
-	int buffer_size = this->user.header_len + this->user.packet_size;
+	int buffer_size = this->user.header_len + f.data.size();
 	unsigned char curr_frame[buffer_size];
 
 	string header = f.checksum + f.padSeqNum();
@@ -154,7 +154,7 @@ int Client::send_frame(Frame f) {
 	cout << "header size: " << header.length() << endl;
 
 	memcpy(curr_frame, header.c_str(), header.length());
-	memcpy(curr_frame + header.length(), f.data.data(), this->user.packet_size);
+	memcpy(curr_frame + header.length(), f.data.data(), f.data.size());
 
 	/* send frame */
 	int bytes_sent = sendto(this->sockfd,
@@ -189,7 +189,7 @@ string Client::create_checksum(string data, int blockSize) {
     for (char &_char : binaryString) {
         newBinary += bitset<8>(_char).to_string();
     }
-    cout << "\nNewBinary: " << newBinary;
+    //cout << "\nNewBinary: " << newBinary;
 
     for (int i = blockSize; i < dataLength; i = i + blockSize) {
         string next = "";
@@ -201,7 +201,7 @@ string Client::create_checksum(string data, int blockSize) {
             nextBlock += bitset<8>(_char).to_string();
         }
 
-        cout << "\nnextBlock: " << nextBlock;
+       //cout << "\nnextBlock: " << nextBlock;
 
         string binaryAddition = "";
         int currentSum = 0;

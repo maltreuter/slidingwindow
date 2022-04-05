@@ -170,16 +170,21 @@ int Server::stop_and_wait(FILE* file) {
 			(struct sockaddr *) &this->conn_info.client_addr,
 			&this->conn_info.addr_size
 		);
+		
 		if(bytes_rcvd == -1) {
 			perror("recvfrom");
 			continue;
 		}
-
+		
 		/* parse out header */
 		unsigned char header[this->conn_info.header_len];
-		unsigned char data[this->conn_info.packet_size];
+		unsigned char data[bytes_rcvd - this->conn_info.header_len];
 		memcpy(header, buffer, this->conn_info.header_len);
-		memcpy(data, buffer + this->conn_info.header_len, this->conn_info.packet_size);
+		memcpy(data, buffer + this->conn_info.header_len, bytes_rcvd - this->conn_info.header_len);
+
+		string data_string(reinterpret_cast<char*>(data));
+		cout << "data length: " << data_string.length() << endl;
+		cout << "size of data: " << sizeof(data) << endl;
 
 		string header_s(header, header + sizeof(header));
 
@@ -191,7 +196,9 @@ int Server::stop_and_wait(FILE* file) {
 		if(header_s.find("done") != string::npos) {
 			write_done = true;
 			cout << "received 'done'" << endl;
-		} else {
+		} else if(check_checksum(checksum_s, data_string, 8)) {
+			cout << "Checksum OK" << endl;
+
 			/* send ack and write buffer to file */
 			ack = "ack" + seq_num_s;
 			int seq_num = stoi(seq_num_s);
@@ -225,6 +232,8 @@ int Server::stop_and_wait(FILE* file) {
 				this->conn_info.total_bytes_written += bytes_written;
 				this->conn_info.packets_rcvd++;
 			}
+		} else {
+			cout << "Checksum failed" << endl;
 		}
 	}
 
@@ -511,8 +520,8 @@ bool Server::check_checksum(string checksum, string data, int blockSize) {
         }
     }
 
-    cout << "\nChecksum: " << checksum;
-    cout << "\nRecvString: " << binaryString;
+    cout << "\nChecksum: " << checksum << endl;;
+    cout << "\nRecvString: " << binaryString << endl;
 
     for (int n = blockSize - 1; n >= 0; n--) {
         currentSum = currentSum + (checksum[n] - '0') + (binaryString[n] - '0');

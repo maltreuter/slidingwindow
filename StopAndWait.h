@@ -20,7 +20,7 @@ class StopAndWait {
 		~StopAndWait();
 
 		int send();
-		bool receive_ack(int send_time);
+		int receive_ack(int send_time);
 };
 
 #endif

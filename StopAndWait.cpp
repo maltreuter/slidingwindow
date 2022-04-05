@@ -27,10 +27,14 @@ int StopAndWait::send() {
 
 	/* to store previous frame for resending if necessary */
 	Frame f = Frame();
+	int last_frame_num = -2;
 
-	while(!read_done) {
+	while(true) {
 		if(!resend) {
 			f = this->client.getNextFrame(file, &read_done, this->packets_sent);
+			if(read_done) {
+				last_frame_num = f.seq_num;
+			}
 		}
 
 		int send_time = this->client.get_current_time();
@@ -40,6 +44,8 @@ int StopAndWait::send() {
 			/* lost_packets does not contain f.seq_num */
 			/* send current frame */
 			string data_string(reinterpret_cast<char*>(f.data.data()));
+			cout << endl;
+			cout << "data length: " << data_string.length() << endl;
 			f.checksum = this->client.create_checksum(data_string, 8);
 			cout << "checksum: " << f.checksum << endl;
 			bytes_sent = this->client.send_frame(f);
@@ -62,29 +68,39 @@ int StopAndWait::send() {
 			this->client.user.lost_packets.erase(position);
 		}
 
-		resend = receive_ack(send_time);
+		int ack_num = receive_ack(send_time);
+		if(ack_num == -1) {
+			resend = true;
+		} else {
+			resend = false;
+		}
 
 		if(!resend) {
 			frames.push_back(f);
 			this->total_bytes_read += f.data.size();
 		}
 
-		/* tell the server we are done sending frames */
-		/* read_done set when we got EOF from fread */
-		if(read_done) {
-			bytes_sent = sendto(this->client.sockfd,
-				"done",
-				4,
-				0,
-				this->client.server_addr,
-				this->client.server_addr_len
-			);
-			if(bytes_sent == -1) {
-				perror("sendto");
-				exit(1);
-			}
-			this->total_bytes_sent += bytes_sent;
+		/* done reading and last frame has been acked */
+		if(read_done && ack_num == last_frame_num) {
+			break;
 		}
+	}
+
+	/* tell the server we are done sending frames */
+	/* read_done set when we got EOF from fread */
+	if(read_done) {
+		bytes_sent = sendto(this->client.sockfd,
+			"done",
+			4,
+			0,
+			this->client.server_addr,
+			this->client.server_addr_len
+		);
+		if(bytes_sent == -1) {
+			perror("sendto");
+			exit(1);
+		}
+		this->total_bytes_sent += bytes_sent;
 	}
 
 	/* print stats */
@@ -98,7 +114,7 @@ int StopAndWait::send() {
 	return 0;
 }
 
-bool StopAndWait::receive_ack(int send_time) {
+int StopAndWait::receive_ack(int send_time) {
 	struct pollfd fds[1];
 	fds[0].fd = this->client.sockfd;
 	fds[0].events = POLLIN;
@@ -109,7 +125,7 @@ bool StopAndWait::receive_ack(int send_time) {
 		if(now - send_time > this->client.user.timeout_int) {
 			cout << "Timeout: " << now - send_time << endl;
 			cout << "Packet " << this->packets_sent << " timed out" << endl;
-			return true;
+			return -1;
 		} else if(poll(fds, 1, 0) > 0) {
 			/* receive ack */
 			/* "ack0001\0" "ack9945\0" */
@@ -132,7 +148,7 @@ bool StopAndWait::receive_ack(int send_time) {
 
 			this->packets_sent++;
 
-			return false;
+			return stoi(ack_num);
 		}
 	}
 }
