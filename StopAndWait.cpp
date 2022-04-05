@@ -118,7 +118,8 @@ int StopAndWait::send() {
 	cout << "Total number of packets sent: " << this->packets_sent << endl;
 	cout << "Total bytes read from file: " << this->total_bytes_read << endl;
 	cout << "Total bytes sent to server: " << this->total_bytes_sent << endl;
-	cout << "Elapsed time: " << this->client.get_current_time() - start_time * 1000 << " seconds";
+	int time_m = this->client.get_current_time() - start_time;
+	cout << "Elapsed time: " << time_m << " milliseconds (~" << time_m / 1000 << " seconds)" << endl;;
 
 	return 0;
 }

@@ -35,6 +35,7 @@ int SelectiveRepeat::send() {
 		if(!read_done) {
 			if(current_window.size() < (size_t) this->client.user.window_size) {
 				f = this->client.getNextFrame(file, &read_done, next_seq_num);
+				this->total_bytes_read += f.data.size();
 				f.timer_running = true;
 				f.timer_time = this->client.get_current_time();
 
@@ -71,22 +72,10 @@ int SelectiveRepeat::send() {
 		bool nak = false;
 		int ack_num = receive_ack(&nak);
 
-		if(ack_num >= 0) {
-			/* print current window */
-			cout << "Current window = [";
-			for(int i = 0; i < current_window.size(); i++) {
-				if(i == current_window.size() - 1) {
-					cout << current_window[i] << "]" << endl;
-				} else {
-					cout << current_window[i] << ", ";
-				}
-			}
-		}
-
 		if(ack_num >= 0 && !nak) {
 			cout << "Ack " << ack_num << " received" << endl;
-
-			for(int i = 0; i < current_window.size(); i++) {
+			
+			for(size_t i = 0; i < current_window.size(); i++) {
 				if(current_window[i].seq_num == ack_num) {
 					current_window[i].acked = true;
 					current_window[i].timer_running = false;
@@ -102,12 +91,34 @@ int SelectiveRepeat::send() {
 				send_base++;
 				current_window.erase(current_window.begin());
 			}
+			
+			/* print current window */
+			cout << "Current window = [";
+			for(size_t i = 0; i < current_window.size(); i++) {
+				if(i == current_window.size() - 1) {
+					cout << current_window[i].seq_num;
+				} else {
+					cout << current_window[i].seq_num << ", ";
+				}
+			}
+			cout << "]" << endl;
 
 		} else if (ack_num >= 0 && nak) {
 			cout << "Nak " << ack_num << " received" << endl;
 
+			/* print current window */
+			cout << "Current window = [";
+			for(size_t i = 0; i < current_window.size(); i++) {
+				if(i == current_window.size() - 1) {
+					cout << current_window[i].seq_num;
+				} else {
+					cout << current_window[i].seq_num << ", ";
+				}
+			}
+			cout << "]" << endl;
+
 			Frame resend;
-			for(int i = 0; i < current_window.size(); i++) {
+			for(size_t i = 0; i < current_window.size(); i++) {
 				if(current_window[i].seq_num == ack_num) {
 					current_window[i].timer_running = true;
 					current_window[i].timer_time = this->client.get_current_time();
@@ -132,7 +143,7 @@ int SelectiveRepeat::send() {
 
 		/* timer */
 		int current_time = this->client.get_current_time();
-		for(int i = 0; i < current_window.size(); i++) {
+		for(size_t i = 0; i < current_window.size(); i++) {
 			if(current_window[i].timer_running && current_time - current_window[i].timer_time > this->client.user.timeout_int) {
 				Frame resend = current_window[i];
 				cout << "Packet " << resend.seq_num << " ***** Timed Out *****" << endl;
@@ -156,7 +167,7 @@ int SelectiveRepeat::send() {
 
 		if(read_done) {
 			bool done = true;
-			for(int i = 0; i < current_window.size(); i++) {
+			for(size_t i = 0; i < current_window.size(); i++) {
 				if(!current_window[i].acked) {
 					done = false;
 					break;
@@ -191,7 +202,8 @@ int SelectiveRepeat::send() {
 	cout << "Total number of packets sent: " << this->packets_sent << endl;
 	cout << "Total bytes read from file: " << this->total_bytes_read << endl;
 	cout << "Total bytes sent to server: " << this->total_bytes_sent << endl;
-	cout << "Elapsed time: " << this->client.get_current_time() - start_time * 1000 << " seconds";
+	int time_m = this->client.get_current_time() - start_time;
+	cout << "Elapsed time: " << time_m << " milliseconds (~" << time_m / 1000 << " seconds)" << endl;
 
 	return 0;
 }

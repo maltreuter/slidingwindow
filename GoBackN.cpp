@@ -39,6 +39,7 @@ int GoBackN::send() {
 		if(!read_done) {
 			if(current_window.size() < (size_t) this->client.user.window_size) {
 				f = this->client.getNextFrame(file, &read_done, next_seq_num);
+				this->total_bytes_read += f.data.size();
 				if(read_done) {
 					last_frame_num = next_seq_num;
 				}
@@ -86,19 +87,6 @@ int GoBackN::send() {
 
 		/* ack received */
 		if(ack_num >= 0) {
-			/* print current window */
-			cout << "Current window = [";
-			queue<Frame> tmp = current_window;
-			while(!tmp.empty()) {
-				if(tmp.size() == 1) {
-					cout << tmp.front().seq_num << "]" << endl;;
-					tmp.pop();
-				} else {
-					cout << tmp.front() << ", ";
-					tmp.pop();
-				}
-			}
-
 			/* shift window */
 			if(ack_num >= send_base && ack_num < next_seq_num) {
 				while(send_base <= ack_num) {
@@ -107,6 +95,22 @@ int GoBackN::send() {
 				}
 				timer_running = false;
 			}
+
+			/* print current window */
+			cout << "Current window = [";
+			queue<Frame> tmp = current_window;
+			while(!tmp.empty()) {
+				Frame frame = tmp.front();
+				if(tmp.size() == 1) {
+					cout << frame.seq_num;
+					tmp.pop();
+				} else {
+					cout << frame.seq_num << ", ";
+					tmp.pop();
+				}
+			}
+			cout << "]" << endl;
+
 		} else {
 			if(!timer_running) {
 				timer_running = true;
@@ -116,7 +120,7 @@ int GoBackN::send() {
 
 		/* if timer == timeout */
 		if(timer_running && this->client.get_current_time() - timer_time > this->client.user.timeout_int) {
-			cout << "***** Timed Out *****";
+			cout << "***** Timed Out *****" << endl;
 			queue<Frame> tmp = current_window;
 			while(!tmp.empty()) {
 				Frame resend = tmp.front();
@@ -163,7 +167,8 @@ int GoBackN::send() {
 	cout << "Total number of packets sent: " << this->packets_sent << endl;
 	cout << "Total bytes read from file: " << this->total_bytes_read << endl;
 	cout << "Total bytes sent to server: " << this->total_bytes_sent << endl;
-	cout << "Elapsed time: " << this->client.get_current_time() - start_time * 1000 << " seconds";
+	int time_m = this->client.get_current_time() - start_time;
+	cout << "Elapsed time: " << time_m << " milliseconds (~" << time_m / 1000 << " seconds)" << endl;
 
 	return 0;
 }

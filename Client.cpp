@@ -238,7 +238,7 @@ string Client::create_checksum(string data, int blockSize) {
         }
     }
     string checksum = binaryString;
-    for (int i = 0; i < binaryString.length(); i++) {
+    for (size_t i = 0; i < binaryString.length(); i++) {
         if (binaryString[i] == '0') {
             checksum[i] = '1';
         } else {

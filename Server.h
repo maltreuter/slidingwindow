@@ -28,6 +28,8 @@ typedef struct connection_info {
 	int errors;
 	int total_bytes_written;
 	int packets_rcvd;
+	int original_packets;
+	int last_seq_num;
 	vector<int> lost_acks;
 } connection_info;
 
