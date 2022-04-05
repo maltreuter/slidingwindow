@@ -13,6 +13,8 @@
 #include <vector>
 #include <stdlib.h>
 #include <algorithm>
+#include <bitset>
+
 #include "Frame.h"
 
 using namespace std;
@@ -45,6 +47,7 @@ class Client {
 		int get_current_time();
 		Frame getNextFrame(FILE* file, bool* read_done, int packets_sent);
 		int send_frame(Frame f);
+		string create_checksum(string data, int blockSize);
 };
 
 #endif

@@ -12,7 +12,7 @@ Client::Client() {
 		-1, /* window size */
 		-1, /* situational errors */
 		-1, /* protocol */
-		8, /* header length */
+		16, /* header length */
 		vector<int>() /* lost packets */
 	};
 
@@ -98,6 +98,17 @@ int Client::handshake() {
 	/* send errors */
 
 	/* send window size */
+	bytes_sent = sendto(this->sockfd,
+	to_string(this->user.window_size).c_str(),
+	to_string(this->user.window_size).length(),
+	0,
+	this->server_addr,
+	this->server_addr_len
+	);
+	if(bytes_sent == -1) {
+		perror("sendto");
+		return -1;
+	}
 
 	return 0;
 }
@@ -135,15 +146,20 @@ Frame Client::getNextFrame(FILE* file, bool* read_done, int packets_sent) {
 
 int Client::send_frame(Frame f) {
 	/* package frame for delivery */
-	int buffer_size = this->user.header_len + this->user.packet_size + 1;
+	int buffer_size = this->user.header_len + this->user.packet_size;
 	unsigned char curr_frame[buffer_size];
-	memcpy(curr_frame, f.padSeqNum().c_str(), this->user.header_len + 1);
-	memcpy(curr_frame + this->user.header_len + 1, f.data.data(), this->user.packet_size);
+
+	string header = f.checksum + f.padSeqNum();
+	cout << "header: " << header << endl;
+	cout << "header size: " << header.length() << endl;
+
+	memcpy(curr_frame, header.c_str(), header.length());
+	memcpy(curr_frame + header.length(), f.data.data(), this->user.packet_size);
 
 	/* send frame */
 	int bytes_sent = sendto(this->sockfd,
 		curr_frame,
-		this->user.header_len + 1 + f.data.size(),
+		this->user.header_len + f.data.size(),
 		0,
 		this->server_addr,
 		this->server_addr_len
@@ -154,4 +170,80 @@ int Client::send_frame(Frame f) {
 	}
 
 	return bytes_sent;
+}
+
+string Client::create_checksum(string data, int blockSize) {
+	int dataLength = data.length();
+    if (dataLength % blockSize != 0) {
+        int paddingSize = blockSize - (dataLength % blockSize);
+        for (int i = 0; i < paddingSize; i++) {
+            data = '0' + data;
+        }
+    }
+
+    string binaryString = "";
+    for (int i = 0; i < blockSize; i++) {
+        binaryString = binaryString + data[i];
+    }
+    string newBinary = "";
+    for (char &_char : binaryString) {
+        newBinary += bitset<8>(_char).to_string();
+    }
+    cout << "\nNewBinary: " << newBinary;
+
+    for (int i = blockSize; i < dataLength; i = i + blockSize) {
+        string next = "";
+        for (int j = i; j < i + blockSize; j++) {
+            next = next + data[j];
+        }
+        string nextBlock = "";
+        for (char &_char : next) {
+            nextBlock += bitset<8>(_char).to_string();
+        }
+
+        cout << "\nnextBlock: " << nextBlock;
+
+        string binaryAddition = "";
+        int currentSum = 0;
+        int currentCarry = 0;
+
+        for (int n = blockSize - 1; n >= 0; n--) {
+            currentSum = currentSum + (nextBlock[n] - '0') + (newBinary[n] - '0');
+            currentCarry = currentSum / 2;
+            if (currentSum == 0 || currentSum == 2) {
+                binaryAddition = '0' + binaryAddition;
+                currentSum = currentCarry;
+            } else {
+                binaryAddition = '1' + binaryAddition;
+                currentSum = currentCarry;
+            }
+        }
+
+        string finalAddition = "";
+        if (currentCarry == 1) {
+            for (int k = binaryAddition.length() - 1; k >= 0; k--) {
+                if (currentCarry == 0) {
+                    finalAddition = binaryAddition[k] + finalAddition;
+                } else if (((binaryAddition[k] - '0') + currentCarry) % 2 == 0) {
+                    finalAddition = "0" + finalAddition;
+                    currentCarry = 1;
+                } else {
+                    finalAddition = "1" + finalAddition;
+                    currentCarry = 0;
+                }
+            }
+            binaryString = finalAddition;
+        } else {
+            binaryString = binaryAddition;
+        }
+    }
+    string checksum = binaryString;
+    for (int i = 0; i < binaryString.length(); i++) {
+        if (binaryString[i] == '0') {
+            checksum[i] = '1';
+        } else {
+            checksum[i] = '0';
+        }
+    }
+    return checksum;
 }

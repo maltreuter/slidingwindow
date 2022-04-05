@@ -37,8 +37,11 @@ int StopAndWait::send() {
 
 		vector<int>::iterator position = find(this->client.user.lost_packets.begin(), this->client.user.lost_packets.end(), f.seq_num);
 		if(position == this->client.user.lost_packets.end()){
-			/* lost_packets does not contain f.seq_num */ 
+			/* lost_packets does not contain f.seq_num */
 			/* send current frame */
+			string data_string(reinterpret_cast<char*>(f.data.data()));
+			f.checksum = this->client.create_checksum(data_string, 8);
+			cout << "checksum: " << f.checksum << endl;
 			bytes_sent = this->client.send_frame(f);
 
 			if(bytes_sent == -1) {
@@ -110,7 +113,7 @@ bool StopAndWait::receive_ack(int send_time) {
 		} else if(poll(fds, 1, 0) > 0) {
 			/* receive ack */
 			/* "ack0001\0" "ack9945\0" */
-			char ack[3 + this->client.user.header_len + 1];
+			char ack[3 + this->client.user.header_len];
 			int bytes_rcvd = recvfrom(this->client.sockfd,
 				ack,
 				sizeof(ack),
@@ -124,7 +127,7 @@ bool StopAndWait::receive_ack(int send_time) {
 			}
 
 			/* split seq_num */
-			string ack_num = string(ack).substr(3, this->client.user.header_len);
+			string ack_num = string(ack).substr(3, this->client.user.header_len / 2);
 			cout << "ack " << ack_num << " received" << endl;
 
 			this->packets_sent++;

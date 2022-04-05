@@ -87,7 +87,8 @@ int main(int argc, char *argv[]) {
 		GoBackN g = GoBackN(c);
 		g.send();
 	} else if(c.user.protocol == 2) {
-		//selective repeat
+		SelectiveRepeat sr = SelectiveRepeat(c);
+		sr.send();
 	} else {
 		cout << "Not a valid protocol. Disconnecting." << endl;
 	}

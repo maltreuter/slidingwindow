@@ -21,7 +21,7 @@ class SelectiveRepeat {
 		~SelectiveRepeat();
 
 		int send();
-		int receive_ack();
+		int receive_ack(bool *nak);
 };
 
 #endif

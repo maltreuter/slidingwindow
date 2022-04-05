@@ -38,13 +38,19 @@ int GoBackN::send() {
 				if(read_done) {
 					last_frame_num = next_seq_num;
 				}
+
+				string data_string(reinterpret_cast<char*>(f.data.data()));
+				f.checksum = this->client.create_checksum(data_string, 8);
+				cout << "checksum: " << f.checksum << endl;
+
 				current_window.push(f);
 				next_seq_num++;
-				
+
 				vector<int>::iterator position = find(this->client.user.lost_packets.begin(), this->client.user.lost_packets.end(), f.seq_num);
 				if(position == this->client.user.lost_packets.end()) {
 					/* lost_packets does not contain f.seq_num */
 					/* send current frame */
+
 					bytes_sent = this->client.send_frame(f);
 
 					if(bytes_sent == -1) {
@@ -89,7 +95,7 @@ int GoBackN::send() {
 			while(!tmp.empty()) {
 				Frame resend = tmp.front();
 				tmp.pop();
-				
+
 				bytes_sent = this->client.send_frame(resend);
 
 				if(bytes_sent == -1) {
@@ -131,7 +137,7 @@ int GoBackN::receive_ack() {
 
 	if(poll(fds, 1, 0) > 0) {
 		/* soemthing to receive */
-		char ack[3 + this->client.user.header_len + 1];
+		char ack[3 + this->client.user.header_len];
 		int bytes_rcvd = recvfrom(this->client.sockfd,
 			ack,
 			sizeof(ack),
@@ -144,7 +150,7 @@ int GoBackN::receive_ack() {
 		}
 
 		/* split seq_num */
-		string ack_num = string(ack).substr(3, this->client.user.header_len);
+		string ack_num = string(ack).substr(3, this->client.user.header_len / 2);
 		cout << "ack " << ack_num << " received" << endl;
 
 		this->packets_sent++;

@@ -92,10 +92,10 @@ int Server::handshake() {
 		0,
 		0,
 		0,
-		0,
-		vector<int>()
+		0
 	};
 
+	this->conn_info.lost_acks = vector<int>();
 	this->conn_info.lost_acks.push_back(20);
 	this->conn_info.lost_acks.push_back(50);
 
@@ -135,6 +135,15 @@ int Server::handshake() {
 	/* Receive errors */
 
 	/* Receive window size */
+	char window_size[8];
+	bytes_rcvd = recvfrom(this->sockfd, window_size, 7, 0, (struct sockaddr *) &this->conn_info.client_addr, &this->conn_info.addr_size);
+	if(bytes_rcvd == -1) {
+		perror("recvfrom");
+		exit(1);
+	}
+	window_size[bytes_rcvd] = '\0';
+
+	this->conn_info.window_size = atoi(window_size);
 
 	return 0;
 }
@@ -165,17 +174,17 @@ int Server::stop_and_wait(FILE* file) {
 			perror("recvfrom");
 			continue;
 		}
-		cout << "received packet " << this->conn_info.packets_rcvd << endl;
-		// cout << "sizeof buffer: " << sizeof(buffer) << endl;
 
 		/* parse out header */
-		unsigned char header[this->conn_info.header_len + 1];
+		unsigned char header[this->conn_info.header_len];
 		unsigned char data[this->conn_info.packet_size];
-		memcpy(header, buffer, this->conn_info.header_len + 1);
-		memcpy(data, buffer + this->conn_info.header_len + 1, this->conn_info.packet_size);
+		memcpy(header, buffer, this->conn_info.header_len);
+		memcpy(data, buffer + this->conn_info.header_len, this->conn_info.packet_size);
 
 		string header_s(header, header + sizeof(header));
-		// cout << "header: " << header_s << " header size: " << header_s.length() << endl;
+
+		string checksum_s = header_s.substr(0, this->conn_info.header_len / 2);
+		string seq_num_s = header_s.substr(this->conn_info.header_len / 2, this->conn_info.header_len / 2);
 
 		/* client will send "done" when it is finished sending the file */
 		/* look for "done" in the buffer to stop looping, otherwise write to file */
@@ -184,10 +193,13 @@ int Server::stop_and_wait(FILE* file) {
 			cout << "received 'done'" << endl;
 		} else {
 			/* send ack and write buffer to file */
-			ack = "ack" + header_s;
-			// cout << "bytes received: " << bytes_rcvd << endl;
+			ack = "ack" + seq_num_s;
+			int seq_num = stoi(seq_num_s);
 
-			int seq_num = stoi(header_s);
+			cout << "received packet " << seq_num_s << endl;
+
+			// bool checksum = check_checksum(checksum_string, string(data), 8);
+
 			// this should "lose" ack 20 and ack 50
 			vector<int>::iterator position = find(this->conn_info.lost_acks.begin(), this->conn_info.lost_acks.end(), seq_num);
 			if(position != this->conn_info.lost_acks.end()) {
@@ -206,7 +218,7 @@ int Server::stop_and_wait(FILE* file) {
 					continue;
 				}
 
-				cout << "ack " << header_s << " sent" << endl;
+				cout << "ack " << seq_num_s << " sent" << endl;
 
 				bytes_written = fwrite(data, 1, bytes_rcvd - sizeof(header), file);
 
@@ -246,17 +258,17 @@ int Server::go_back_n(FILE* file) {
 			perror("recvfrom");
 			continue;
 		}
-		// cout << "sizeof buffer: " << sizeof(buffer) << endl;
 
 		/* parse out header */
-		unsigned char header[this->conn_info.header_len + 1];
+		unsigned char header[this->conn_info.header_len];
 		unsigned char data[this->conn_info.packet_size];
-		memcpy(header, buffer, this->conn_info.header_len + 1);
-		memcpy(data, buffer + this->conn_info.header_len + 1, this->conn_info.packet_size);
+		memcpy(header, buffer, this->conn_info.header_len);
+		memcpy(data, buffer + this->conn_info.header_len, this->conn_info.packet_size);
 
 		string header_s(header, header + sizeof(header));
-		ack = "ack" + header_s;
-		// cout << "header: " << header_s << " header size: " << header_s.length() << endl;
+
+		string checksum_s = header_s.substr(0, this->conn_info.header_len / 2);
+		string seq_num_s = header_s.substr(this->conn_info.header_len / 2, this->conn_info.header_len / 2);
 
 		/* client will send "done" when it is finished sending the file */
 		/* look for "done" in the buffer to stop looping, otherwise write to file */
@@ -264,16 +276,19 @@ int Server::go_back_n(FILE* file) {
 			write_done = true;
 			cout << "received 'done'" << endl;
 		} else {
-			cout << "received packet " << header_s << endl;
-			int seq_num = stoi(header_s);
+			ack = "ack" + seq_num_s;
+			int seq_num = stoi(seq_num_s);
+
+			cout << "received packet " << seq_num << endl;
+
+			// bool checksum = check_checksum(checksum_string, string(data), 8);
+
 			vector<int>::iterator position = find(this->conn_info.lost_acks.begin(), this->conn_info.lost_acks.end(), seq_num);
 			if(position != this->conn_info.lost_acks.end()) {
 				cout << ack << " not sent" << endl;
 				this->conn_info.lost_acks.erase(position);
 			} else {
 				/* send ack and write buffer to file */
-				// cout << "bytes received: " << bytes_rcvd << endl;
-
 				if(seq_num == expected_seq_num) {
 					bytes_sent = sendto(this->sockfd,
 						ack.c_str(),
@@ -287,7 +302,7 @@ int Server::go_back_n(FILE* file) {
 						continue;
 					}
 
-					cout << "sent ack " << header_s << endl;
+					cout << "sent ack " << seq_num_s << endl;
 
 					bytes_written = fwrite(data, 1, bytes_rcvd - sizeof(header), file);
 
@@ -322,7 +337,7 @@ int Server::selective_repeat(FILE* file) {
 
 	Frame f = Frame();
 	int recv_base = 0;
-	bool sent_neg_ack = false;
+	// bool sent_neg_ack = false;
 
 	vector<Frame> window;
 
@@ -331,7 +346,7 @@ int Server::selective_repeat(FILE* file) {
 		char buffer[this->conn_info.packet_size + this->conn_info.header_len + 1];
 		memset(buffer, 0, this->conn_info.packet_size + this->conn_info.header_len + 1);
 
-		bytes_rcvd = recvfrom(this->sockfd,
+		int bytes_rcvd = recvfrom(this->sockfd,
 			buffer,
 			this->conn_info.packet_size + this->conn_info.header_len + 1,
 			0,
@@ -345,34 +360,70 @@ int Server::selective_repeat(FILE* file) {
 		// cout << "sizeof buffer: " << sizeof(buffer) << endl;
 
 		/* parse out header */
-		unsigned char header[this->conn_info.header_len + 1];
+		unsigned char header[this->conn_info.header_len];
 		unsigned char data[this->conn_info.packet_size];
-		memcpy(header, buffer, this->conn_info.header_len + 1);
-		memcpy(data, buffer + this->conn_info.header_len + 1, this->conn_info.packet_size);
+		memcpy(header, buffer, this->conn_info.header_len);
+		memcpy(data, buffer + this->conn_info.header_len, this->conn_info.packet_size);
 
 		string header_s(header, header + sizeof(header));
-		ack = "ack" + header_s;
+
+		string checksum_s = header_s.substr(0, this->conn_info.header_len / 2);
+		string seq_num_s = header_s.substr(this->conn_info.header_len / 2, this->conn_info.header_len / 2);
+
+		string ack;
 
 		if(header_s.find("done") != string::npos) {
 			write_done = true;
 			cout << "received 'done'" << endl;
 		} else {
-			cout << "received packet " << header_s << endl;
-			int seq_num = stoi(header_s);
-			f = Frame(seq_num, data, this->conn_info.header_len);
+			ack = "ack" + seq_num_s;
+			int seq_num = stoi(seq_num_s);
 
+			cout << "received packet " << seq_num << endl;
+
+			bool checksum = true;
+			// bool checksum = check_checksum(checksum_string, string(data), 8);
+
+			vector<unsigned char> f_data;
+			for(int i = 0; i < this->conn_info.packet_size; i++) {
+				f_data.push_back(data[i]);
+			}
+
+			f = Frame(seq_num, f_data, this->conn_info.header_len);
+
+
+			cout << "f.seq_num: " << f.seq_num << endl;
+			cout << "seq_num: " << seq_num << endl;
+			cout << "recv_base: " << recv_base << endl;
 			/* packet not damaged and in current window */
-			if(f.seq_num >= recv_base && f.seq_num < (recv_base + this->conn_info.window_size)) {
+			if((f.seq_num >= recv_base) && (f.seq_num < (recv_base + this->conn_info.window_size))) {
 				/* send ack */
+				int bytes_sent = sendto(this->sockfd,
+					ack.c_str(),
+					ack.length(),
+					0,
+					(struct sockaddr *) &this->conn_info.client_addr,
+					this->conn_info.addr_size
+				);
+				if(bytes_sent == -1) {
+					perror("sendto");
+					continue;
+				}
+
+				cout << "sent ack " << seq_num_s << endl;
 
 				/* packet is smallest in window and can be written */
 				if(f.seq_num == recv_base) {
 					/* write */
-					recv_base++;
+					int bytes_written = fwrite(data, 1, bytes_rcvd - sizeof(header), file);
+
+					recv_base++; // recv_base = recv_base + 1 % max_seq_num + 1
 					/* check other out of order frames */
 					for(int i = 0; i < window.size(); i++) {
 						if(window[i].seq_num == recv_base) {
 							/* write */
+							bytes_written = fwrite(window[i].data.data(), 1, window[i].data.size(), file);
+
 							recv_base++;
 							window.erase(window.begin() + i);
 							i--;
@@ -384,13 +435,102 @@ int Server::selective_repeat(FILE* file) {
 				}
 
 				/* if checksum == false, packet is corrupted */
-			} else if() {
-				string nak = "nak" + header_s;
+			} else if(!checksum) {
+				string nak = "nak" + seq_num_s;
 				/* send nak */
 			}
+		}
 	}
 
 	return 0;
+}
+
+bool Server::check_checksum(string checksum, string data, int blockSize) {
+	int dataLength = data.length();
+    int currentSum = 0;
+    int currentCarry = 0;
+    string recvSum = "";
+    if (dataLength % blockSize != 0) {
+        int paddingSize = blockSize - (dataLength % blockSize);
+        for (int i = 0; i < paddingSize; i++) {
+            data = '0' + data;
+        }
+    }
+
+    string binaryString = "";
+    for (int i = 0; i < blockSize; i++) {
+        binaryString = binaryString + data[i];
+    }
+    string newBinary = "";
+    for (char &_char : binaryString) {
+        newBinary += bitset<8>(_char).to_string();
+    }
+
+    for (int i = blockSize; i < dataLength; i = i + blockSize) {
+        string next = "";
+        for (int j = i; j < i + blockSize; j++) {
+            next = next + data[j];
+        }
+        string nextBlock = "";
+        for (char &_char : next) {
+            nextBlock += bitset<8>(_char).to_string();
+        }
+
+        string binaryAddition = "";
+        int currentSum = 0;
+        int currentCarry = 0;
+
+        for (int n = blockSize - 1; n >= 0; n--) {
+            currentSum = currentSum + (nextBlock[n] - '0') + (newBinary[n] - '0');
+            currentCarry = currentSum / 2;
+            if (currentSum == 0 || currentSum == 2) {
+                binaryAddition = '0' + binaryAddition;
+                currentSum = currentCarry;
+            } else {
+                binaryAddition = '1' + binaryAddition;
+                currentSum = currentCarry;
+            }
+        }
+
+        string finalAddition = "";
+        if (currentCarry == 1) {
+            for (int k = binaryAddition.length() - 1; k >= 0; k--) {
+                if (currentCarry == 0) {
+                    finalAddition = binaryAddition[k] + finalAddition;
+                } else if (((binaryAddition[k] - '0') + currentCarry) % 2 == 0) {
+                    finalAddition = "0" + finalAddition;
+                    currentCarry = 1;
+                } else {
+                    finalAddition = "1" + finalAddition;
+                    currentCarry = 0;
+                }
+            }
+            binaryString = finalAddition;
+        } else {
+            binaryString = binaryAddition;
+        }
+    }
+
+    cout << "\nChecksum: " << checksum;
+    cout << "\nRecvString: " << binaryString;
+
+    for (int n = blockSize - 1; n >= 0; n--) {
+        currentSum = currentSum + (checksum[n] - '0') + (binaryString[n] - '0');
+        currentCarry = currentSum / 2;
+        if (currentSum == 0 || currentSum == 2) {
+            recvSum = '0' + recvSum;
+            currentSum = currentCarry;
+        } else {
+            recvSum = '1' + recvSum;
+            currentSum = currentCarry;
+        }
+    }
+    cout << "\n" << recvSum;
+    if (count(recvSum.begin(), recvSum.end(), '1') == blockSize) {
+        return true;
+    } else {
+        return false;
+    }
 }
 
 int Server::close_server() {
