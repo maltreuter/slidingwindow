@@ -555,7 +555,7 @@ bool Server::check_checksum(string checksum, string data, int blockSize) {
         }
     }
 
-    cout << "checksum: " << checksum << endl;
+    cout << "checksum:   " << checksum << endl;
     cout << "recvstring: " << binaryString << endl;
 
     for (int n = blockSize - 1; n >= 0; n--) {
