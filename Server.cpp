@@ -210,13 +210,12 @@ int Server::stop_and_wait(FILE* file) {
 		/* client will send "done" when it is finished sending the file */
 		/* look for "done" in the buffer to stop looping, otherwise write to file */
 		if(check_checksum(checksum_s, data, sizeof(data), 8)) {
-			cout << "Checksum OK" << endl;
-
 			/* send ack and write buffer to file */
 			ack = "ack" + seq_num_s;
 			int seq_num = stoi(seq_num_s);
 
 			cout << "Packet " << seq_num << " received" << endl;
+			cout << "Checksum OK" << endl;
 			this->conn_info.last_seq_num = seq_num;
 
 			// check if we should lose any acks
@@ -287,9 +286,9 @@ int Server::go_back_n(FILE* file) {
 
 		/* parse out header */
 		unsigned char header[this->conn_info.header_len];
-		unsigned char data[this->conn_info.packet_size];
+		unsigned char data[bytes_rcvd - this->conn_info.header_len];
 		memcpy(header, buffer, this->conn_info.header_len);
-		memcpy(data, buffer + this->conn_info.header_len, this->conn_info.packet_size);
+		memcpy(data, buffer + this->conn_info.header_len, bytes_rcvd - this->conn_info.header_len);
 
 		string header_s(header, header + sizeof(header));
 
@@ -401,9 +400,9 @@ int Server::selective_repeat(FILE* file) {
 
 		/* parse out header */
 		unsigned char header[this->conn_info.header_len];
-		unsigned char data[this->conn_info.packet_size];
+		unsigned char data[bytes_rcvd - this->conn_info.header_len];
 		memcpy(header, buffer, this->conn_info.header_len);
-		memcpy(data, buffer + this->conn_info.header_len, this->conn_info.packet_size);
+		memcpy(data, buffer + this->conn_info.header_len, bytes_rcvd - this->conn_info.header_len);
 
 		string header_s(header, header + sizeof(header));
 
