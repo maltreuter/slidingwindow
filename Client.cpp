@@ -152,8 +152,8 @@ int Client::send_frame(Frame f) {
 	unsigned char curr_frame[buffer_size];
 
 	string header = f.checksum + f.padSeqNum();
-	cout << "header: " << header << endl;
-	cout << "header size: " << header.length() << endl;
+	// cout << "header: " << header << endl;
+	// cout << "header size: " << header.length() << endl;
 
 	memcpy(curr_frame, header.c_str(), header.length());
 	memcpy(curr_frame + header.length(), f.data.data(), f.data.size());
@@ -171,13 +171,13 @@ int Client::send_frame(Frame f) {
 		perror("sendto");
 	}
 
-	cout << "bytes sent: " << bytes_sent << endl;
+	// cout << "bytes sent: " << bytes_sent << endl;
 
 	return bytes_sent;
 }
 
 string Client::create_checksum(unsigned char *data, int dataLength, int blockSize) {
-	cout << "dataLength: " << dataLength << endl;
+	// cout << "dataLength: " << dataLength << endl;
 	int paddingSize = 0;
 	unsigned char pad = '0';
 	if (dataLength % blockSize != 0) {
@@ -193,26 +193,17 @@ string Client::create_checksum(unsigned char *data, int dataLength, int blockSiz
 	memcpy(buffer + paddingSize, data, dataLength);
 
     string binaryString = "";
-    // for (int i = 0; i < blockSize; i++) {
-    //     binaryString = binaryString + data[i];
-    // }
+
     string newBinary = "";
     for (int i = 0; i < blockSize; i++) {
         newBinary += uchar_to_binary(buffer[i]);
     }
-    //cout << "\nNewBinary: " << newBinary;
 
     for (int i = blockSize; i < dataLength; i = i + blockSize) {
-        // string next = "";
-        // for (int j = i; j < i + blockSize; j++) {
-        //     next = next + data[j];
-        // }
         string nextBlock = "";
         for (int j = i; j < i + blockSize; j++) {
             nextBlock += uchar_to_binary(buffer[j]);
         }
-
-       //cout << "\nnextBlock: " << nextBlock;
 
         string binaryAddition = "";
         int currentSum = 0;

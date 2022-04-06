@@ -51,8 +51,5 @@ string uchar_to_binary(unsigned char c) {
 		bp += sprintf(bp, "%d", (c >> i) & 1);
 	}
 
-	// string binary_s = string(binary);
-	// reverse(binary_s.begin(), binary_s.end());
-	// return binary_s;
 	return string(binary);
 }

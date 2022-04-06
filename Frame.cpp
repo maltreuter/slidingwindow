@@ -32,9 +32,3 @@ string Frame::padSeqNum() {
 	sn.insert(0, padding, '0');
 	return sn;
 }
-
-/* string(data + seq_num) */
-string Frame::to_string() {
-	// return this->padSeqNum() + data;
-	return "borked";
-}

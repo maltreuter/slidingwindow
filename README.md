@@ -4,30 +4,42 @@ Implementation of 3 sliding window protocols: Stop and Wait, Go-Back-N, and Sele
 ## Usage
 
 ### Compilation
+Compiled with gcc 8.4.0 (g++) and std=c++17
 ```
-make /* compile to use tcp (sock_stream) */
-make udp /* compile to use udp (sock_dgram) */
+make
 make clean
 ```
 
 ### Running
 ```
 ./server <port>
-./client <host> <port>
-
-./serverudp <port>
-./clientudp <host> <port> <path-to-file>
+./client
 ```
 
+Run ./server <port> in one terminal and ./client in another
+You will be prompted for necessary values in ./client or choose default values
+
+Situational errors include lost packets, corrupted packets, or lost acks. List which packets or acks based on sequence number.
+
+Default values:
+	- file path: "./testrandom" (30kb)
+	- host: "127.0.0.1"
+	- port: "9001"
+	- packet size: "128"
+	- timeout interval (ms): "5000"
+	- window size: "8"
+	- situational errors: "0"
+
+
 ## TODO
-- [ ] Menu
-- [ ] Send file/acks
-- [ ] Timeouts
+- [x] Menu
+- [x] Send file/acks
+- [x] Timeouts
 - [ ] Situational Errors
-- [ ] Error detection (CRC/Internet Checksum)
-- [ ] Stop and Wait
-- [ ] Go-Back-N
-- [ ] Selective Repeat
+- [x] Error detection (CRC/Internet Checksum)
+- [x] Stop and Wait
+- [x] Go-Back-N
+- [x] Selective Repeat
 - [ ] send ack method
 - [ ] split header method
 - [ ] receive frame method

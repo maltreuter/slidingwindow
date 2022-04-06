@@ -22,7 +22,6 @@ class Frame {
 		~Frame();
 
 		string padSeqNum();
-		string to_string();
 };
 
 #endif

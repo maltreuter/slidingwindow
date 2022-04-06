@@ -79,6 +79,7 @@ void Server::handle_connections() {
 		cout << "Number of retransmitted packets received: " << this->conn_info.packets_rcvd - this->conn_info.original_packets << endl;
 		cout << "Number of packets received: " << this->conn_info.packets_rcvd << endl;
 		cout << "Number of bytes written: " << this->conn_info.total_bytes_written << endl;
+		cout << "md5sum: " << get_md5(file_path) << endl;
 
 		cout << "Client disconnected" << endl;
 		loop++;
@@ -199,9 +200,7 @@ int Server::stop_and_wait(FILE* file) {
 		memcpy(header, buffer, this->conn_info.header_len);
 		memcpy(data, buffer + this->conn_info.header_len, bytes_rcvd - this->conn_info.header_len);
 
-		// string data_string(reinterpret_cast<char*>(data));
-		// cout << "data length: " << data_string.length() << endl;
-		cout << "size of data: " << sizeof(data) << endl;
+		// cout << "size of data: " << sizeof(data) << endl;
 
 		string header_s(header, header + sizeof(header));
 
@@ -282,6 +281,8 @@ int Server::go_back_n(FILE* file) {
 			perror("recvfrom");
 			continue;
 		}
+
+		/* if bytes_rcvd < header_len == bad tings */
 
 		/* parse out header */
 		unsigned char header[this->conn_info.header_len];
@@ -384,7 +385,8 @@ int Server::selective_repeat(FILE* file) {
 			perror("recvfrom");
 			continue;
 		}
-		// cout << "sizeof buffer: " << sizeof(buffer) << endl;
+
+		/* if bytes_rcvd < header_len == bad tings */
 
 		/* parse out header */
 		unsigned char header[this->conn_info.header_len];
@@ -498,7 +500,7 @@ int Server::selective_repeat(FILE* file) {
 }
 
 bool Server::check_checksum(string checksum, unsigned char *data, int dataLength, int blockSize) {
-	cout << "dataLength: " << dataLength << endl;
+	// cout << "dataLength: " << dataLength << endl;
 	int paddingSize = 0;
 	unsigned char pad = '0';
 	if (dataLength % blockSize != 0) {
@@ -518,19 +520,13 @@ bool Server::check_checksum(string checksum, unsigned char *data, int dataLength
     string recvSum = "";
 
     string binaryString = "";
-    // for (int i = 0; i < blockSize; i++) {
-    //     binaryString = binaryString + data[i];
-    // }
+
     string newBinary = "";
     for (int i = 0; i < blockSize; i++) {
         newBinary += uchar_to_binary(buffer[i]);
     }
 
     for (int i = blockSize; i < dataLength; i = i + blockSize) {
-        // string next = "";
-        // for (int j = i; j < i + blockSize; j++) {
-        //     next = next + data[j];
-        // }
         string nextBlock = "";
         for (int j = i; j < i + blockSize; j++) {
             nextBlock += uchar_to_binary(buffer[j]);
@@ -571,8 +567,8 @@ bool Server::check_checksum(string checksum, unsigned char *data, int dataLength
         }
     }
 
-    cout << "checksum:   " << checksum << endl;
-    cout << "recvstring: " << binaryString << endl;
+    // cout << "checksum:   " << checksum << endl;
+    // cout << "recvstring: " << binaryString << endl;
 
     for (int n = blockSize - 1; n >= 0; n--) {
         currentSum = currentSum + (checksum[n] - '0') + (binaryString[n] - '0');
@@ -586,7 +582,7 @@ bool Server::check_checksum(string checksum, unsigned char *data, int dataLength
         }
     }
 
-	cout << "result: " << recvSum << endl;
+	// cout << "result: " << recvSum << endl;
 
 	if (count(recvSum.begin(), recvSum.end(), '1') == blockSize) {
         return true;
