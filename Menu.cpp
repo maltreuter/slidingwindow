@@ -4,7 +4,7 @@
 #include "GoBackN.h"
 #include "SelectiveRepeat.h"
 
-#include "utils.h"
+// #include "utils.h"
 
 using namespace std;
 
@@ -29,9 +29,6 @@ vector<int> get_lost_packets() {
 
 int main(int argc, char *argv[]) {
 	Client c = Client();
-
-	unsigned char ch = 'C';
-	cout << uchar_to_binary(ch) << endl;
 
 	/* Menu */
 	int default_values;

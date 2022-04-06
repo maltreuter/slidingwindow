@@ -182,14 +182,25 @@ int Server::stop_and_wait(FILE* file) {
 			continue;
 		}
 
+		cout << "bytes_rcvd: " << bytes_rcvd << endl;
+
+		/* done */
+		if(bytes_rcvd - this->conn_info.header_len < 0) {
+			if(string(buffer).find("done") != string::npos) {
+				write_done = true;
+				cout << "Received 'done'" << endl;
+				continue;
+			}
+		}
+
 		/* parse out header */
 		unsigned char header[this->conn_info.header_len];
 		unsigned char data[bytes_rcvd - this->conn_info.header_len];
 		memcpy(header, buffer, this->conn_info.header_len);
 		memcpy(data, buffer + this->conn_info.header_len, bytes_rcvd - this->conn_info.header_len);
 
-		string data_string(reinterpret_cast<char*>(data));
-		cout << "data length: " << data_string.length() << endl;
+		// string data_string(reinterpret_cast<char*>(data));
+		// cout << "data length: " << data_string.length() << endl;
 		cout << "size of data: " << sizeof(data) << endl;
 
 		string header_s(header, header + sizeof(header));
@@ -199,10 +210,7 @@ int Server::stop_and_wait(FILE* file) {
 
 		/* client will send "done" when it is finished sending the file */
 		/* look for "done" in the buffer to stop looping, otherwise write to file */
-		if(header_s.find("done") != string::npos) {
-			write_done = true;
-			cout << "Received 'done'" << endl;
-		} else if(check_checksum(checksum_s, data_string, 8)) {
+		if(check_checksum(checksum_s, data, sizeof(data), 8)) {
 			cout << "Checksum OK" << endl;
 
 			/* send ack and write buffer to file */
@@ -489,35 +497,43 @@ int Server::selective_repeat(FILE* file) {
 	return 0;
 }
 
-bool Server::check_checksum(string checksum, string data, int blockSize) {
-	int dataLength = data.length();
-    int currentSum = 0;
+bool Server::check_checksum(string checksum, unsigned char *data, int dataLength, int blockSize) {
+	cout << "dataLength: " << dataLength << endl;
+	int paddingSize = 0;
+	unsigned char pad = '0';
+	if (dataLength % blockSize != 0) {
+        paddingSize = blockSize - (dataLength % blockSize);
+    }
+	unsigned char padding[paddingSize];
+	for (int i = 0; i < paddingSize; i++) {
+		padding[i] = pad;
+	}
+
+	unsigned char buffer[dataLength + paddingSize];
+	memcpy(buffer, padding, paddingSize);
+	memcpy(buffer + paddingSize, data, dataLength);
+
+	int currentSum = 0;
     int currentCarry = 0;
     string recvSum = "";
-    if (dataLength % blockSize != 0) {
-        int paddingSize = blockSize - (dataLength % blockSize);
-        for (int i = 0; i < paddingSize; i++) {
-            data = '0' + data;
-        }
-    }
 
     string binaryString = "";
-    for (int i = 0; i < blockSize; i++) {
-        binaryString = binaryString + data[i];
-    }
+    // for (int i = 0; i < blockSize; i++) {
+    //     binaryString = binaryString + data[i];
+    // }
     string newBinary = "";
-    for (char &_char : binaryString) {
-        newBinary += bitset<8>(_char).to_string();
+    for (int i = 0; i < blockSize; i++) {
+        newBinary += uchar_to_binary(buffer[i]);
     }
 
     for (int i = blockSize; i < dataLength; i = i + blockSize) {
-        string next = "";
-        for (int j = i; j < i + blockSize; j++) {
-            next = next + data[j];
-        }
+        // string next = "";
+        // for (int j = i; j < i + blockSize; j++) {
+        //     next = next + data[j];
+        // }
         string nextBlock = "";
-        for (char &_char : next) {
-            nextBlock += bitset<8>(_char).to_string();
+        for (int j = i; j < i + blockSize; j++) {
+            nextBlock += uchar_to_binary(buffer[j]);
         }
 
         string binaryAddition = "";

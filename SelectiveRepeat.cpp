@@ -39,8 +39,8 @@ int SelectiveRepeat::send() {
 				f.timer_running = true;
 				f.timer_time = this->client.get_current_time();
 
-				string data_string(reinterpret_cast<char*>(f.data.data()));
-				f.checksum = this->client.create_checksum(data_string, 8);
+				// string data_string(reinterpret_cast<char*>(f.data.data()));
+				f.checksum = this->client.create_checksum(f.data.data(), f.data.size(), 8);
 				cout << "checksum: " << f.checksum << endl;
 				current_window.push_back(f);
 				next_seq_num++;
@@ -74,7 +74,7 @@ int SelectiveRepeat::send() {
 
 		if(ack_num >= 0 && !nak) {
 			cout << "Ack " << ack_num << " received" << endl;
-			
+
 			for(size_t i = 0; i < current_window.size(); i++) {
 				if(current_window[i].seq_num == ack_num) {
 					current_window[i].acked = true;
@@ -91,7 +91,7 @@ int SelectiveRepeat::send() {
 				send_base++;
 				current_window.erase(current_window.begin());
 			}
-			
+
 			/* print current window */
 			cout << "Current window = [";
 			for(size_t i = 0; i < current_window.size(); i++) {

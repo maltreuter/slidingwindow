@@ -49,9 +49,10 @@ int StopAndWait::send() {
 		if(position == this->client.user.lost_packets.end()){
 			/* lost_packets does not contain f.seq_num */
 			/* send current frame */
-			string data_string(reinterpret_cast<char*>(f.data.data()));
-			cout << "data length: " << data_string.length() << endl;
-			f.checksum = this->client.create_checksum(data_string, 8);
+			// string data_string(reinterpret_cast<char*>(f.data.data()));
+
+			cout << "data length: " << f.data.size() << endl;
+			f.checksum = this->client.create_checksum(f.data.data(), f.data.size(), 8);
 			cout << "checksum: " << f.checksum << endl;
 			bytes_sent = this->client.send_frame(f);
 

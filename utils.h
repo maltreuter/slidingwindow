@@ -5,7 +5,6 @@
 #include <chrono>
 #include <stdlib.h>
 #include <cstring>
-#include <algorithm>
 
 #define BUF_SIZE 1024
 

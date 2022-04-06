@@ -44,8 +44,8 @@ int GoBackN::send() {
 					last_frame_num = next_seq_num;
 				}
 
-				string data_string(reinterpret_cast<char*>(f.data.data()));
-				f.checksum = this->client.create_checksum(data_string, 8);
+				// string data_string(reinterpret_cast<char*>(f.data.data()));
+				f.checksum = this->client.create_checksum(f.data.data(), f.data.size(), 8);
 				cout << "checksum: " << f.checksum << endl;
 
 				current_window.push(f);

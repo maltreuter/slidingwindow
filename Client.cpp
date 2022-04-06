@@ -176,33 +176,40 @@ int Client::send_frame(Frame f) {
 	return bytes_sent;
 }
 
-string Client::create_checksum(string data, int blockSize) {
-	int dataLength = data.length();
-    if (dataLength % blockSize != 0) {
-        int paddingSize = blockSize - (dataLength % blockSize);
-        for (int i = 0; i < paddingSize; i++) {
-            data = '0' + data;
-        }
+string Client::create_checksum(unsigned char *data, int dataLength, int blockSize) {
+	cout << "dataLength: " << dataLength << endl;
+	int paddingSize = 0;
+	unsigned char pad = '0';
+	if (dataLength % blockSize != 0) {
+        paddingSize = blockSize - (dataLength % blockSize);
     }
+	unsigned char padding[paddingSize];
+	for (int i = 0; i < paddingSize; i++) {
+		padding[i] = pad;
+	}
+
+	unsigned char buffer[dataLength + paddingSize];
+	memcpy(buffer, padding, paddingSize);
+	memcpy(buffer + paddingSize, data, dataLength);
 
     string binaryString = "";
-    for (int i = 0; i < blockSize; i++) {
-        binaryString = binaryString + data[i];
-    }
+    // for (int i = 0; i < blockSize; i++) {
+    //     binaryString = binaryString + data[i];
+    // }
     string newBinary = "";
-    for (char &_char : binaryString) {
-        newBinary += bitset<8>(_char).to_string();
+    for (int i = 0; i < blockSize; i++) {
+        newBinary += uchar_to_binary(buffer[i]);
     }
     //cout << "\nNewBinary: " << newBinary;
 
     for (int i = blockSize; i < dataLength; i = i + blockSize) {
-        string next = "";
-        for (int j = i; j < i + blockSize; j++) {
-            next = next + data[j];
-        }
+        // string next = "";
+        // for (int j = i; j < i + blockSize; j++) {
+        //     next = next + data[j];
+        // }
         string nextBlock = "";
-        for (char &_char : next) {
-            nextBlock += bitset<8>(_char).to_string();
+        for (int j = i; j < i + blockSize; j++) {
+            nextBlock += uchar_to_binary(buffer[j]);
         }
 
        //cout << "\nnextBlock: " << nextBlock;

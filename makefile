@@ -4,8 +4,8 @@ POSEIDON = -lstdc++fs
 
 all: client server
 
-server: server.o frame.o
-	$(CC) $(FLAGS) Server.o Frame.o -o server
+server: server.o frame.o utils.o
+	$(CC) $(FLAGS) Server.o Frame.o utils.o -o server
 
 client: menu.o frame.o client.o stopandwait.o gobackn.o selectiverepeat.o utils.o
 	$(CC) $(FLAGS) Menu.o Frame.o Client.o StopAndWait.o GoBackN.o SelectiveRepeat.o utils.o -o client

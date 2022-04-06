@@ -15,6 +15,7 @@
 #include <bitset>
 
 #include "Frame.h"
+#include "utils.h"
 
 using namespace std;
 
@@ -50,7 +51,7 @@ class Server {
 		int stop_and_wait(FILE* file);
 		int go_back_n(FILE* file);
 		int selective_repeat(FILE* file);
-		bool check_checksum(string checksum, string data, int blockSize);
+		bool check_checksum(string checksum, unsigned char *data, int dataLength, int blockSize);
 		int close_server();
 };
 
