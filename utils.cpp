@@ -47,11 +47,12 @@ string uchar_to_binary(unsigned char c) {
 	char binary[8];
 	char *bp = binary;
 
-	for(int i = 0; i < 8; i++) {
+	for(int i = 7; i >= 0; i--) {
 		bp += sprintf(bp, "%d", (c >> i) & 1);
 	}
 
-	string binary_s = string(binary);
-	reverse(binary_s.begin(), binary_s.end());
-	return binary_s;
+	// string binary_s = string(binary);
+	// reverse(binary_s.begin(), binary_s.end());
+	// return binary_s;
+	return string(binary);
 }
