@@ -48,6 +48,8 @@ int SelectiveRepeat::send() {
 				/* lose specific packets */
 				vector<int>::iterator position = find(this->client.user.lost_packets.begin(), this->client.user.lost_packets.end(), f.seq_num);
 				if(position == this->client.user.lost_packets.end()){
+
+					f.checksum = this->client.create_checksum(f.data.data(), f.data.size(), 8);
 					bytes_sent = this->client.send_frame(f);
 
 					if(bytes_sent == -1) {

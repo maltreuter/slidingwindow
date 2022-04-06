@@ -57,6 +57,7 @@ int GoBackN::send() {
 					/* lost_packets does not contain f.seq_num */
 					/* send current frame */
 
+					f.checksum = this->client.create_checksum(f.data.data(), f.data.size(), 8);
 					bytes_sent = this->client.send_frame(f);
 
 					if(bytes_sent == -1) {

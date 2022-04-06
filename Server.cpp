@@ -222,7 +222,7 @@ int Server::stop_and_wait(FILE* file) {
 			// check if we should lose any acks
 			vector<int>::iterator position = find(this->conn_info.lost_acks.begin(), this->conn_info.lost_acks.end(), seq_num);
 			if(position != this->conn_info.lost_acks.end()) {
-				cout << ack << " not sent" << endl;
+				cout << "Ack " << seq_num << " lost" << endl;
 				this->conn_info.lost_acks.erase(position);
 			} else {
 				bytes_sent = sendto(this->sockfd,
@@ -261,6 +261,7 @@ int Server::go_back_n(FILE* file) {
 	bool write_done = false;
 	int expected_seq_num = 0;
 	string last_ack = "";
+	int last_ack_num;
 
 	int bytes_rcvd;
 	int bytes_written;
@@ -308,15 +309,18 @@ int Server::go_back_n(FILE* file) {
 			this->conn_info.packets_rcvd++;
 			this->conn_info.last_seq_num = seq_num;
 
-			// bool checksum = check_checksum(checksum_string, string(data), 8);
+			bool checksum = check_checksum(checksum_s, data, sizeof(data), 8);
 
 			vector<int>::iterator position = find(this->conn_info.lost_acks.begin(), this->conn_info.lost_acks.end(), seq_num);
-			if(position != this->conn_info.lost_acks.end()) {
-				cout << "Ack " << seq_num << " not sent" << endl;
+			if(checksum && position != this->conn_info.lost_acks.end()) {
+				cout << "Checksum OK" << endl;
+				cout << "Ack " << seq_num << " lost" << endl;
 				this->conn_info.lost_acks.erase(position);
 			} else {
 				/* send ack and write buffer to file */
-				if(seq_num == expected_seq_num) {
+				if(checksum && seq_num == expected_seq_num) {
+					cout << "Checksum OK" << endl;
+
 					bytes_sent = sendto(this->sockfd,
 						ack.c_str(),
 						ack.length(),
@@ -337,8 +341,13 @@ int Server::go_back_n(FILE* file) {
 					this->conn_info.original_packets++;
 					expected_seq_num++;
 					last_ack = ack;
+					last_ack_num = seq_num;
 
 				} else {
+					if(!checksum) {
+						cout << "Checksum failed" << endl;
+					}
+
 					bytes_sent = sendto(this->sockfd,
 						last_ack.c_str(),
 						last_ack.length(),
@@ -350,6 +359,8 @@ int Server::go_back_n(FILE* file) {
 						perror("sendto");
 						continue;
 					}
+
+					cout << "Ack " << last_ack_num << " sent" << endl;
 				}
 			}
 			cout << "Current window = [" << expected_seq_num << "]" << endl;
@@ -412,8 +423,7 @@ int Server::selective_repeat(FILE* file) {
 			this->conn_info.last_seq_num = seq_num;
 			this->conn_info.packets_rcvd++;
 
-			bool checksum = true;
-			// bool checksum = check_checksum(checksum_string, string(data), 8);
+			bool checksum = check_checksum(checksum_s, data, sizeof(data), 8);
 
 			vector<unsigned char> f_data;
 			for(int i = 0; i < this->conn_info.packet_size; i++) {
@@ -424,11 +434,13 @@ int Server::selective_repeat(FILE* file) {
 
 
 			/* packet not damaged and in current window */
-			if((f.seq_num >= recv_base) && (f.seq_num < (recv_base + this->conn_info.window_size))) {
+			if(checksum && (f.seq_num >= recv_base) && (f.seq_num < (recv_base + this->conn_info.window_size))) {
+				cout << "Checksum OK" << endl;
+
 				/* lose acks */
 				vector<int>::iterator position = find(this->conn_info.lost_acks.begin(), this->conn_info.lost_acks.end(), seq_num);
 				if(position != this->conn_info.lost_acks.end()) {
-					cout << "Ack " << seq_num << " not sent" << endl;
+					cout << "Ack " << seq_num << " lost" << endl;
 					this->conn_info.lost_acks.erase(position);
 				} else {
 					/* send ack */
@@ -444,7 +456,6 @@ int Server::selective_repeat(FILE* file) {
 						continue;
 					}
 
-					cout << "Checksum OK" << endl;;
 					cout << "Ack " << seq_num << " sent" << endl;
 					this->conn_info.original_packets++;
 

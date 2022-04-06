@@ -64,10 +64,10 @@ int StopAndWait::send() {
 
 			if(resend) {
 				cout << "Packet " << f.seq_num << " retransmitted" << endl;
-				original_packets++;
+				resent_packets++;
 			} else {
 				cout << "Packet " << f.seq_num << " sent" << endl;
-				resent_packets++;
+				original_packets++;
 			}
 		} else {
 			/* lose this packet and remove it from lost_packets */

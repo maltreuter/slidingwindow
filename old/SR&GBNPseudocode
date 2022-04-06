@@ -1,0 +1,170 @@
+Go Back-N:
+
+	Sender:
+	frame f;
+	window_size = max_seq_num - 1;
+	send_base = 0;
+	next_seq_num = 0;
+	initialize vector current_frames_sent;
+
+	while(1):
+		if there is data to be sent:
+			if (next_seq_num < send_base + window_size):
+				f = new Frame
+				f.seq_num = next_seq_num
+				add f to current_frames_sent
+				send f
+				next_seq_num = next_seq_num + 1
+			else:
+				do nothing
+			end
+		end
+		
+		if ack received:
+			if ack_num >= send_base && ack_num < next_seq_num:
+				while send_base <= ack_num:
+					send_base = send_base + 1
+				end
+				stop timer
+			end
+		else:
+			if timer not started:
+				start timer
+		end
+		
+		if timer = timeout:
+			for each frame in current_frames_sent:
+				send frame
+			end
+			start timer
+		end
+	end
+
+Receiver:
+
+	frame f;
+	expected_seq_num = 0;
+
+	while(1):
+		if frame received:
+			check checksum of f.seq_num:
+				if f.seq_num = expected_seq_num:
+					do what we need to do with the data
+					send ack with ack_num = expected_seq_num
+					expected_seq_num = expected_seq_num + 1
+				else:
+					discard f.seq_num
+					send ack with ack_num = expected_seq_num
+			else:
+				do nothing
+			end
+		end
+	end
+
+
+
+Selective Repeat:
+
+Sender:
+
+	frame f;
+	window_size = (max_seq_num + 1)/2;
+	send_base = 0;
+	next_seq_num = 0;
+	initialize vector out_of_order_packets;
+
+	while(1):
+		if there is data to be sent:
+			if (next_seq_num + send_base) < window_size:
+				do what we need to do with data (read data, create checksum, etc.)
+				f = new Frame
+				f.seq_num = next_seq_num
+				send f
+				start timer
+				next_seq_num = next_seq_num + 1
+			else:
+				do nothing
+			end
+		end
+
+		if ack recieved:
+			if ack_num >= send_base && ack_num < next_seq_num:
+				/* ex. "ack xxx not received" */
+				if ack = negative:
+					/* resend failed packet */
+					reset timer
+					resend f whose seq_num = ack_num
+				/* ex. "ack xxx received" & ack number is the smallest ack number in the window */
+				else if ack = positive && ack_num = send_base:
+					/* move frame */
+					remove f whose seq_num = send_base
+					stop timer for f whose seq_num = ack_num
+					send_base = send_base + 1
+					/* grabbing all of the other packets that were sent out of order & moving frame accordingly */
+					for each ack_num in out_of_order_packets:
+						if ack_num = send_base:
+							remove f whose seq_num = send_base
+							send_base = send_base + 1
+							remove ack_num from out_of_order_packets
+						end
+					end
+				/* "ack xxx received" & ack number not the smallest in the window */
+				else:
+					/* Even though packet hasn't been delivered, it has been acked so it can stop its timer */
+					stop timer for f whose seq_num = ack_num
+					store ack_num in out_of_order_packets
+					sort out_of_order_packets
+				end
+			end
+		end
+		
+		if timer = timeout:
+			reset timer
+			resend f
+		end
+	end
+
+Receiver:
+
+	frame f;
+	recv_base = 0;
+	sent_neg_ack = false;
+	window_size = (max_seq_num + 1)/2;
+	initialize vector out_of_order_packets;
+
+
+	while(1):
+		if received frame:
+			check checksum of f.seq_num
+			/* Packet is not corrupted and is in the window */
+			if checksum = true && (f.seq_num >= recv_base && f.seq_num < (recv_base + window_size - 1)):
+				send positive ack with ack_num = seq_num
+				/* Packet is the smallest seq_num in the window & can be delivered */
+				if f.seq_num = recv_base:
+					do what we need to do with the data
+					recv_base = recv_base + 1
+					/* grabbing all of the other packets that were recieved out of order and delivering them too */
+					for each seq_num in out_of_order_packets:
+						if seq_num = recv_base:
+							do what we need to do with the data from f.seq_num
+							recv_base = recv_base + 1
+							remove seq_num from out_of_order_packets
+						end
+					end
+				/* Packet is NOT the smallest seq_num in window & cannot be delivered */
+				else:
+					add seq_num to out_of_order_packets
+					sort out_of_order_packets
+				end
+			/* Packet is on the left side of the window (duplicate) so it has already been received & delivered */
+			else if checksum = true && (f.seq_num >= (recv_base - window_size) && f.seq_num < (recv_base - 1)):
+				ignore
+			/* Packet is corrupted */
+			else:
+				send negative ack 
+			end
+		end
+	end
+
+
+			
