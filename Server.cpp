@@ -297,9 +297,13 @@ int Server::go_back_n(FILE* file) {
 
 		/* client will send "done" when it is finished sending the file */
 		/* look for "done" in the buffer to stop looping, otherwise write to file */
-		if(header_s.find("done") != string::npos) {
-			write_done = true;
-			cout << "Received 'done'" << endl;
+		/* done */
+		if(bytes_rcvd - this->conn_info.header_len < 0) {
+			if(string(buffer).find("done") != string::npos) {
+				write_done = true;
+				cout << "Received 'done'" << endl;
+				continue;
+			}
 		} else {
 			ack = "ack" + seq_num_s;
 			int seq_num = stoi(seq_num_s);
@@ -411,9 +415,13 @@ int Server::selective_repeat(FILE* file) {
 
 		string ack;
 
-		if(header_s.find("done") != string::npos) {
-			write_done = true;
-			cout << "Received 'done'" << endl;
+		/* done */
+		if(bytes_rcvd - this->conn_info.header_len < 0) {
+			if(string(buffer).find("done") != string::npos) {
+				write_done = true;
+				cout << "Received 'done'" << endl;
+				continue;
+			}
 		} else {
 			ack = "ack" + seq_num_s;
 			int seq_num = stoi(seq_num_s);
