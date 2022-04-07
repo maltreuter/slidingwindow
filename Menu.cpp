@@ -42,7 +42,6 @@ int main(int argc, char *argv[]) {
 		c.user.packet_size = 128;
 		c.user.timeout_int = 5000;
 		c.user.window_size = 8;
-		c.user.errors = 0;
 	} else {
 		cout << "Enter file to send: ";
 		cin >> c.user.file_path;
@@ -61,10 +60,10 @@ int main(int argc, char *argv[]) {
 
 		cout << "Enter window size: ";
 		cin >> c.user.window_size;
-
-		cout << "Enter situational errors (0 - None, 1 - Random, 2 - User Spec): ";
-		cin >> c.user.errors;
 	}
+
+	cout << "Enter situational errors (0 - None, 1 - Random, 2 - User Spec): ";
+	cin >> c.user.errors;
 
 	if(c.user.errors == 2) {
 		c.user.lost_packets = get_lost_packets();
