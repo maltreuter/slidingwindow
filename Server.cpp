@@ -263,12 +263,12 @@ int Server::go_back_n(FILE* file) {
 	string ack;
 	bool write_done = false;
 	int expected_seq_num = 0;
-	string last_ack = "";
-	int last_ack_num;
+	string last_ack = "ack-0000001";
+	int last_ack_num = -1;
 
 	int bytes_rcvd;
 	int bytes_written;
-	int bytes_sent;;
+	int bytes_sent;
 
 	while(!write_done) {
 		char buffer[this->conn_info.packet_size + this->conn_info.header_len + 1];

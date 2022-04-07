@@ -25,7 +25,7 @@ int GoBackN::send() {
 	int next_seq_num = 0;
 	bool timer_running = false;
 	int timer_time = 0;
-	int last_frame_num = -2;
+	int last_frame_num = -3;
 
 	bool read_done = false;
 	Frame f = Frame();
@@ -80,8 +80,8 @@ int GoBackN::send() {
 			break;
 		}
 
-		/* ack received */
-		if(ack_num >= 0) {
+		/* ack received (could be -1 if first packet was lost)*/
+		if(ack_num >= -1) {
 			/* shift window */
 			if(ack_num >= send_base && ack_num < next_seq_num) {
 				while(send_base <= ack_num) {
@@ -195,5 +195,5 @@ int GoBackN::receive_ack() {
 		return stoi(ack_num);
 	}
 
-	return -1;
+	return -2;
 }
