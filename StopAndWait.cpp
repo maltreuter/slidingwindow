@@ -20,8 +20,6 @@ int StopAndWait::send() {
 	/* check if file exists */
 	FILE *file = fopen(this->client.user.file_path.c_str(), "rb");
 
-	vector<Frame> frames;
-
 	bool read_done = false;
 	bool resend = false;
 
@@ -49,10 +47,6 @@ int StopAndWait::send() {
 		if(position == this->client.user.lost_packets.end()){
 			/* lost_packets does not contain f.seq_num */
 			/* send current frame */
-
-			// cout << "data length: " << f.data.size() << endl;
-			f.checksum = this->client.create_checksum(f.data.data(), f.data.size(), 8);
-			// cout << "checksum: " << f.checksum << endl;
 			bytes_sent = this->client.send_frame(f);
 
 			if(bytes_sent == -1) {
@@ -83,7 +77,6 @@ int StopAndWait::send() {
 		}
 
 		if(!resend) {
-			frames.push_back(f);
 			this->total_bytes_read += f.data.size();
 		}
 

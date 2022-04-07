@@ -12,7 +12,7 @@
 #include <poll.h>
 #include <vector>
 #include <algorithm>
-#include <bitset>
+#include <csignal>
 
 #include "Frame.h"
 #include "utils.h"
@@ -46,7 +46,7 @@ class Server {
 		Server(string port, int backlog);
 		~Server();
 		void start_server();
-		void handle_connections();
+		int handle_connections(int n_loops);
 		int handshake();
 		int stop_and_wait(FILE* file);
 		int go_back_n(FILE* file);

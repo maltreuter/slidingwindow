@@ -2,6 +2,8 @@
 
 using namespace std;
 
+bool running = true;
+
 bool sort_frame(Frame a, Frame b) {
 	return a.seq_num < b.seq_num;
 }
@@ -51,39 +53,43 @@ void Server::start_server() {
 	}
 }
 
-void Server::handle_connections() {
+int Server::handle_connections(int n_loops) {
 	/* accept connections */
-	int loop = 0;
-	while(1) {
-		handshake();
+	struct pollfd fds[1];
+	fds[0].fd = this->sockfd;
+	fds[0].events = POLLIN;
 
-		string file_path = "./out" + to_string(loop);
-		FILE *file = fopen(file_path.c_str(), "wb");
-
-		if(this->conn_info.protocol == 0) {
-			stop_and_wait(file);
-		} else if(this->conn_info.protocol == 1) {
-			go_back_n(file);
-		} else if(this->conn_info.protocol == 2) {
-			selective_repeat(file);
-		}
-
-		fclose(file);
-
-		// string out_md5 = get_md5(filesystem::path(file_path));
-
-		cout << "\n************************************" << endl;
-		cout << "Wrote to file: '" << file_path << endl;
-		cout << "Last packet seq# received: " << this->conn_info.last_seq_num << endl;
-		cout << "Number of original packets received: " << this->conn_info.original_packets << endl;
-		cout << "Number of retransmitted packets received: " << this->conn_info.packets_rcvd - this->conn_info.original_packets << endl;
-		cout << "Number of packets received: " << this->conn_info.packets_rcvd << endl;
-		cout << "Number of bytes written: " << this->conn_info.total_bytes_written << endl;
-		cout << "md5sum: " << get_md5(file_path) << endl;
-
-		cout << "Client disconnected" << endl;
-		loop++;
+	if(poll(fds, 1, 0) == 0) {
+		return -1;
 	}
+
+	handshake();
+
+	string file_path = "./out" + to_string(n_loops);
+	FILE *file = fopen(file_path.c_str(), "wb");
+
+	if(this->conn_info.protocol == 0) {
+		stop_and_wait(file);
+	} else if(this->conn_info.protocol == 1) {
+		go_back_n(file);
+	} else if(this->conn_info.protocol == 2) {
+		selective_repeat(file);
+	}
+
+	fclose(file);
+
+	cout << "\n************************************" << endl;
+	cout << "Wrote to file: '" << file_path << "'"<< endl;
+	cout << "Last packet seq# received: " << this->conn_info.last_seq_num << endl;
+	cout << "Number of original packets received: " << this->conn_info.original_packets << endl;
+	cout << "Number of retransmitted packets received: " << this->conn_info.packets_rcvd - this->conn_info.original_packets << endl;
+	cout << "Number of packets received: " << this->conn_info.packets_rcvd << endl;
+	cout << "Number of bytes written: " << this->conn_info.total_bytes_written << endl;
+	cout << "md5sum: " << get_md5(file_path) << endl;
+
+	cout << "Client disconnected" << endl;
+
+	return 0;
 }
 
 int Server::handshake() {
@@ -611,10 +617,19 @@ int main(int argc, char *argv[]) {
 		exit(1);
 	}
 
+	int file_number = 0;
+
 	Server s = Server(argv[1], 10);
 	s.start_server();
-	s.handle_connections();
 
-	/* signal handler for ctrl-c */
+	while(true) {
+		int handled = s.handle_connections(file_number);
+		if(handled == 0) {
+			file_number++;
+		}
+
+	}
+
 	s.close_server();
+	return 0;
 }

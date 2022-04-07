@@ -143,7 +143,10 @@ Frame Client::getNextFrame(FILE* file, bool* read_done, int packets_sent) {
 	for(int i = 0; i < bytes_read; i++) {
 		data.push_back(frame_data[i]);
 	}
-	return Frame(packets_sent, data, this->user.header_len);
+
+	Frame f = Frame(packets_sent, data, this->user.header_len);
+	f.checksum = create_checksum(f.data.data(), f.data.size(), 8);
+	return f;
 }
 
 int Client::send_frame(Frame f) {

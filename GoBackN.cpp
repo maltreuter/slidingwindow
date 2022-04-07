@@ -44,10 +44,6 @@ int GoBackN::send() {
 					last_frame_num = next_seq_num;
 				}
 
-				// string data_string(reinterpret_cast<char*>(f.data.data()));
-				f.checksum = this->client.create_checksum(f.data.data(), f.data.size(), 8);
-				cout << "checksum: " << f.checksum << endl;
-
 				current_window.push(f);
 				next_seq_num++;
 
@@ -56,8 +52,6 @@ int GoBackN::send() {
 				if(position == this->client.user.lost_packets.end()) {
 					/* lost_packets does not contain f.seq_num */
 					/* send current frame */
-
-					f.checksum = this->client.create_checksum(f.data.data(), f.data.size(), 8);
 					bytes_sent = this->client.send_frame(f);
 
 					if(bytes_sent == -1) {
@@ -168,6 +162,7 @@ int GoBackN::send() {
 	cout << "Total number of packets sent: " << this->packets_sent << endl;
 	cout << "Total bytes read from file: " << this->total_bytes_read << endl;
 	cout << "Total bytes sent to server: " << this->total_bytes_sent << endl;
+	cout << "md5sum: " << get_md5(this->client.user.file_path) << endl;
 	int time_m = this->client.get_current_time() - start_time;
 	cout << "Elapsed time: " << time_m << " milliseconds (~" << time_m / 1000 << " seconds)" << endl;
 

@@ -39,9 +39,6 @@ int SelectiveRepeat::send() {
 				f.timer_running = true;
 				f.timer_time = this->client.get_current_time();
 
-				// string data_string(reinterpret_cast<char*>(f.data.data()));
-				f.checksum = this->client.create_checksum(f.data.data(), f.data.size(), 8);
-				cout << "checksum: " << f.checksum << endl;
 				current_window.push_back(f);
 				next_seq_num++;
 
@@ -49,7 +46,6 @@ int SelectiveRepeat::send() {
 				vector<int>::iterator position = find(this->client.user.lost_packets.begin(), this->client.user.lost_packets.end(), f.seq_num);
 				if(position == this->client.user.lost_packets.end()){
 
-					f.checksum = this->client.create_checksum(f.data.data(), f.data.size(), 8);
 					bytes_sent = this->client.send_frame(f);
 
 					if(bytes_sent == -1) {
@@ -204,6 +200,7 @@ int SelectiveRepeat::send() {
 	cout << "Total number of packets sent: " << this->packets_sent << endl;
 	cout << "Total bytes read from file: " << this->total_bytes_read << endl;
 	cout << "Total bytes sent to server: " << this->total_bytes_sent << endl;
+	cout << "md5sum: " << get_md5(this->client.user.file_path) << endl;
 	int time_m = this->client.get_current_time() - start_time;
 	cout << "Elapsed time: " << time_m << " milliseconds (~" << time_m / 1000 << " seconds)" << endl;
 
