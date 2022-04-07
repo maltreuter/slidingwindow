@@ -99,7 +99,7 @@ int SelectiveRepeat::send() {
 					cout << current_window[i].seq_num << ", ";
 				}
 			}
-			cout << "]" << endl;
+			cout << "]" << endl << endl;
 
 		} else if (ack_num >= 0 && nak) {
 			cout << "Nak " << ack_num << " received" << endl;
@@ -113,7 +113,7 @@ int SelectiveRepeat::send() {
 					cout << current_window[i].seq_num << ", ";
 				}
 			}
-			cout << "]" << endl;
+			cout << "]" << endl << endl;
 
 			Frame resend;
 			for(size_t i = 0; i < current_window.size(); i++) {
@@ -132,7 +132,7 @@ int SelectiveRepeat::send() {
 				continue;
 			}
 
-			cout << "Packet " << resend.seq_num << " retransmitted" << endl;
+			cout << "Packet " << resend.seq_num << " retransmitted" << endl << endl;
 			resent_packets++;
 			packets_sent++;
 
@@ -143,18 +143,17 @@ int SelectiveRepeat::send() {
 		int current_time = this->client.get_current_time();
 		for(size_t i = 0; i < current_window.size(); i++) {
 			if(current_window[i].timer_running && current_time - current_window[i].timer_time > this->client.user.timeout_int) {
-				Frame resend = current_window[i];
-				cout << "Packet " << resend.seq_num << " ***** Timed Out *****" << endl;
+				cout << "Packet " << current_window[i].seq_num << " ***** Timed Out *****" << endl;
 
-				resend.timer_time = current_time;
+				current_window[i].timer_time = current_time;
 
-				bytes_sent = this->client.send_frame(resend);
+				bytes_sent = this->client.send_frame(current_window[i]);
 
 				if(bytes_sent == -1) {
 					continue;
 				}
 
-				cout << "Packet " << resend.seq_num << " retransmitted" << endl;
+				cout << "Packet " << current_window[i].seq_num << " retransmitted" << endl << endl;
 				resent_packets++;
 				packets_sent++;
 

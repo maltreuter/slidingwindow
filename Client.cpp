@@ -137,8 +137,6 @@ Frame Client::getNextFrame(FILE* file, bool* read_done, int packets_sent) {
 		}
 	}
 
-	cout << "bytes read: " << bytes_read << endl;
-
 	vector<unsigned char> data;
 	for(int i = 0; i < bytes_read; i++) {
 		data.push_back(frame_data[i]);

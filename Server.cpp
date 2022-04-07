@@ -189,8 +189,6 @@ int Server::stop_and_wait(FILE* file) {
 			continue;
 		}
 
-		cout << "bytes_rcvd: " << bytes_rcvd << endl;
-
 		/* done */
 		if(bytes_rcvd - this->conn_info.header_len < 0) {
 			if(string(buffer).find("done") != string::npos) {
@@ -370,7 +368,7 @@ int Server::go_back_n(FILE* file) {
 			}
 		}
 		cout << "Current window = [" << expected_seq_num << "]" << endl;
-
+		cout << endl;
 	}
 
 	return 0;
@@ -510,6 +508,7 @@ int Server::selective_repeat(FILE* file) {
 			}
 			cout << "]" << endl;
 		}
+		cout << endl;
 	}
 
 	return 0;

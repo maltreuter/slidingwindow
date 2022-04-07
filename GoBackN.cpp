@@ -104,7 +104,7 @@ int GoBackN::send() {
 					tmp.pop();
 				}
 			}
-			cout << "]" << endl;
+			cout << "]" << endl << endl;
 
 		} else {
 			if(!timer_running) {
@@ -127,7 +127,7 @@ int GoBackN::send() {
 					continue;
 				}
 
-				cout << "Packet " << resend.seq_num << " retransmitted" << endl;
+				cout << "Packet " << resend.seq_num << " retransmitted" << endl << endl;
 				resent_packets++;
 				this->packets_sent++;
 
