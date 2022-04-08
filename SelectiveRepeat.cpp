@@ -123,7 +123,7 @@ int SelectiveRepeat::send() {
 				}
 			}
 
-			bytes_sent = this->client.send_frame(resend);
+			bytes_sent = this->client.send_frame(resend, true);
 
 			if(bytes_sent == -1) {
 				perror("sendto");
@@ -145,7 +145,7 @@ int SelectiveRepeat::send() {
 
 				current_window[i].timer_time = current_time;
 
-				bytes_sent = this->client.send_frame(current_window[i]);
+				bytes_sent = this->client.send_frame(current_window[i], true);
 
 				if(bytes_sent == -1) {
 					continue;

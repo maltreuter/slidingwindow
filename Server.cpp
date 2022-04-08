@@ -188,13 +188,19 @@ int Server::stop_and_wait(FILE* file) {
 
 		string header_s(header, header + sizeof(header));
 
-		string checksum_s = header_s.substr(0, this->conn_info.header_len / 2);
-		string seq_num_s = header_s.substr(this->conn_info.header_len / 2, this->conn_info.header_len / 2);
+		string resent_s = header_s.substr(1, 1);
+		string checksum_s = header_s.substr(1, (this->conn_info.header_len - 1) / 2);
+		string seq_num_s = header_s.substr((this->conn_info.header_len - 1) / 2 + 1, (this->conn_info.header_len - 1) / 2);
 
+		int resent = stoi(resent_s);
 		ack = "ack" + seq_num_s;
 		int seq_num = stoi(seq_num_s);
 
 		cout << "Packet " << seq_num << " received" << endl;
+		this->conn_info.packets_rcvd++;
+		if(resent == 0) {
+			this->conn_info.original_packets++;
+		}
 
 		if(check_checksum(checksum_s, data, sizeof(data), 8)) {
 			cout << "Checksum OK" << endl;
@@ -226,7 +232,6 @@ int Server::stop_and_wait(FILE* file) {
 				bytes_written = fwrite(data, 1, bytes_rcvd - sizeof(header), file);
 
 				this->conn_info.total_bytes_written += bytes_written;
-				this->conn_info.packets_rcvd++;
 			}
 		} else {
 			cout << "Checksum failed" << endl;
@@ -284,15 +289,20 @@ int Server::go_back_n(FILE* file) {
 
 		string header_s(header, header + sizeof(header));
 
-		string checksum_s = header_s.substr(0, this->conn_info.header_len / 2);
-		string seq_num_s = header_s.substr(this->conn_info.header_len / 2, this->conn_info.header_len / 2);
+		string resent_s = header_s.substr(1, 1);
+		string checksum_s = header_s.substr(1, (this->conn_info.header_len - 1) / 2);
+		string seq_num_s = header_s.substr((this->conn_info.header_len - 1) / 2 + 1, (this->conn_info.header_len - 1) / 2);
 
+		int resent = stoi(resent_s);
 		ack = "ack" + seq_num_s;
 		int seq_num = stoi(seq_num_s);
 
 		cout << "Packet " << seq_num << " received" << endl;
 		this->conn_info.packets_rcvd++;
 		this->conn_info.last_seq_num = seq_num;
+		if(resent == 0) {
+			this->conn_info.original_packets++;
+		}
 
 		bool checksum = check_checksum(checksum_s, data, sizeof(data), 8);
 
@@ -399,15 +409,20 @@ int Server::selective_repeat(FILE* file) {
 
 		string header_s(header, header + sizeof(header));
 
-		string checksum_s = header_s.substr(0, this->conn_info.header_len / 2);
-		string seq_num_s = header_s.substr(this->conn_info.header_len / 2, this->conn_info.header_len / 2);
+		string resent_s = header_s.substr(1, 1);
+		string checksum_s = header_s.substr(1, (this->conn_info.header_len - 1) / 2);
+		string seq_num_s = header_s.substr((this->conn_info.header_len - 1) / 2 + 1, (this->conn_info.header_len - 1) / 2);
 
+		int resent = stoi(resent_s);
 		string ack = "ack" + seq_num_s;
 		int seq_num = stoi(seq_num_s);
 
 		cout << "Packet " << seq_num << " received" << endl;
 		this->conn_info.last_seq_num = seq_num;
 		this->conn_info.packets_rcvd++;
+		if(resent == 0) {
+			this->conn_info.original_packets++;
+		}
 
 		bool checksum = check_checksum(checksum_s, data, sizeof(data), 8);
 
@@ -494,6 +509,8 @@ int Server::selective_repeat(FILE* file) {
 
 	return 0;
 }
+
+
 
 bool Server::check_checksum(string checksum, unsigned char *data, int dataLength, int blockSize) {
 	// cout << "dataLength: " << dataLength << endl;

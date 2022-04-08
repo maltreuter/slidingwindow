@@ -12,7 +12,7 @@ Client::Client() {
 		-1, /* window size */
 		-1, /* situational errors */
 		-1, /* protocol */
-		16, /* header length */
+		17, /* header length (1 for resent, 8 for seq num, 8 for checksum)*/
 		vector<int>(), /* lost packets */
 		vector<int>(), /* lost_acks */
 		vector<int>() /*corrupt_packets */
@@ -146,12 +146,19 @@ Frame Client::getNextFrame(FILE* file, bool* read_done, int seq_num) {
 	return f;
 }
 
-int Client::send_frame(Frame f) {
+int Client::send_frame(Frame f, bool resend) {
 	/* package frame for delivery */
 	int buffer_size = this->user.header_len + f.data.size();
 	unsigned char curr_frame[buffer_size];
 
-	string header = f.checksum + f.padSeqNum();
+	string header;
+	if(resend) {
+		header = "1";
+	} else {
+		header = "0";
+	}
+
+	header += f.checksum + f.padSeqNum();
 
 	memcpy(curr_frame, header.c_str(), header.length());
 	memcpy(curr_frame + header.length(), f.data.data(), f.data.size());
@@ -179,7 +186,7 @@ int Client::send_frame_with_errors(Frame f) {
 	/* if packet should not be lost */
 	if(position == this->user.lost_packets.end()) {
 		/* send it */
-		return send_frame(f);
+		return send_frame(f, false);
 	} else {
 		/* remove from lost_packets */
 		this->user.lost_packets.erase(position);

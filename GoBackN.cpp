@@ -118,7 +118,7 @@ int GoBackN::send() {
 				Frame resend = tmp.front();
 				tmp.pop();
 
-				bytes_sent = this->client.send_frame(resend);
+				bytes_sent = this->client.send_frame(resend, true);
 
 				if(bytes_sent == -1) {
 					continue;
