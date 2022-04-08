@@ -188,7 +188,7 @@ int Server::stop_and_wait(FILE* file) {
 
 		string header_s(header, header + sizeof(header));
 
-		string resent_s = header_s.substr(1, 1);
+		string resent_s = header_s.substr(0, 1);
 		string checksum_s = header_s.substr(1, (this->conn_info.header_len - 1) / 2);
 		string seq_num_s = header_s.substr((this->conn_info.header_len - 1) / 2 + 1, (this->conn_info.header_len - 1) / 2);
 
@@ -289,7 +289,7 @@ int Server::go_back_n(FILE* file) {
 
 		string header_s(header, header + sizeof(header));
 
-		string resent_s = header_s.substr(1, 1);
+		string resent_s = header_s.substr(0, 1);
 		string checksum_s = header_s.substr(1, (this->conn_info.header_len - 1) / 2);
 		string seq_num_s = header_s.substr((this->conn_info.header_len - 1) / 2 + 1, (this->conn_info.header_len - 1) / 2);
 
@@ -409,7 +409,7 @@ int Server::selective_repeat(FILE* file) {
 
 		string header_s(header, header + sizeof(header));
 
-		string resent_s = header_s.substr(1, 1);
+		string resent_s = header_s.substr(0, 1);
 		string checksum_s = header_s.substr(1, (this->conn_info.header_len - 1) / 2);
 		string seq_num_s = header_s.substr((this->conn_info.header_len - 1) / 2 + 1, (this->conn_info.header_len - 1) / 2);
 
