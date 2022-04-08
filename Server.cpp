@@ -110,19 +110,15 @@ int Server::handshake() {
 
 	/* receive packet size */
 	this->conn_info.packet_size = stoi(receive_string());
-	cout << this->conn_info.packet_size << endl;
 
 	/* receive header length */
 	this->conn_info.header_len = stoi(receive_string());
-	cout << this->conn_info.header_len << endl;
 
 	/* receive protocol */
 	this->conn_info.protocol = stoi(receive_string());
-	cout << this->conn_info.protocol << endl;
 
 	/* Receive errors */
 	this->conn_info.errors = stoi(receive_string());
-	cout << this->conn_info.errors << endl;
 	
 	if(this->conn_info.errors == 1) {
 		this->conn_info.lost_acks = string_to_vector(receive_string());
@@ -149,7 +145,6 @@ string Server::receive_string() {
 
 int Server::stop_and_wait(FILE* file) {
 	cout << "Running Stop and Wait protocol..." << endl;
-	/* open file to write */
 	string ack;
 
 	bool write_done = false;
@@ -240,9 +235,6 @@ int Server::stop_and_wait(FILE* file) {
 		cout << endl;
 	}
 
-	/* client tells us how many packets were retransmitted because idrk how else to do it */
-	this->conn_info.original_packets = this->conn_info.packets_rcvd - stoi(receive_string());
-
 	return 0;
 }
 
@@ -283,8 +275,6 @@ int Server::go_back_n(FILE* file) {
 				continue;
 			}
 		}
-
-		/* if bytes_rcvd < header_len == bad tings */
 
 		/* parse out header */
 		unsigned char header[this->conn_info.header_len];
@@ -336,7 +326,6 @@ int Server::go_back_n(FILE* file) {
 				bytes_written = fwrite(data, 1, bytes_rcvd - sizeof(header), file);
 
 				this->conn_info.total_bytes_written += bytes_written;
-				this->conn_info.original_packets++;
 				expected_seq_num++;
 				last_ack = ack;
 				last_ack_num = seq_num;
@@ -373,7 +362,6 @@ int Server::selective_repeat(FILE* file) {
 
 	Frame f = Frame();
 	int recv_base = 0;
-	// bool sent_neg_ack = false;
 
 	vector<Frame> window;
 
@@ -430,7 +418,6 @@ int Server::selective_repeat(FILE* file) {
 
 		f = Frame(seq_num, f_data, this->conn_info.header_len);
 
-
 		/* packet not damaged and in current window */
 		if(checksum && (f.seq_num >= recv_base) && (f.seq_num < (recv_base + this->conn_info.window_size))) {
 			cout << "Checksum OK" << endl;
@@ -457,7 +444,6 @@ int Server::selective_repeat(FILE* file) {
 				}
 
 				cout << "Ack " << seq_num << " sent" << endl;
-				this->conn_info.original_packets++;
 
 				/* packet is smallest in window and can be written */
 				if(f.seq_num == recv_base) {
@@ -484,9 +470,8 @@ int Server::selective_repeat(FILE* file) {
 				}
 			}
 
-			/* if checksum == false, packet is corrupted */
 		} else if(!checksum) {
-			cout << "Checksum failed" << endl;;
+			cout << "Checksum failed" << endl;
 			string nak = "nak" + seq_num_s;
 			/* send nak */
 			cout << "Nak " << seq_num << " sent" << endl;;

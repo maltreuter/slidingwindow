@@ -104,13 +104,6 @@ int StopAndWait::send() {
 		this->total_bytes_sent += bytes_sent;
 	}
 
-	/* tell the server how many packets were retransmitted because idrk how else to do it */
-	bytes_sent = this->client.send_to_server(to_string(resent_packets));
-
-	if(bytes_sent == -1) {
-		exit(1);
-	}
-
 	/* print stats */
 	cout << "\n************************************" << endl;
 	cout << "Sent file: " << this->client.user.file_path << endl;
