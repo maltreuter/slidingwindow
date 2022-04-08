@@ -8,22 +8,23 @@
 
 using namespace std;
 
-vector<int> get_lost();
+vector<int> get_packets();
 
-vector<int> get_lost() {
-	vector<int> lost = vector<int>();
+vector<int> get_packets(string prompt) {
+	vector<int> packets = vector<int>();
 
 	while(true) {
+		cout << prompt << endl;
 		string input;
 		cin >> input;
 
 		if(input == "q") {
 			break;
 		}
-		lost.push_back(stoi(input));
+		packets.push_back(stoi(input));
 	}
 
-	return lost;
+	return packets;
 }
 
 int main(int argc, char *argv[]) {
@@ -72,14 +73,14 @@ int main(int argc, char *argv[]) {
 	}
 
 	if(sit_errors == 2) {
-		cout << "Enter an ack to lose or q to stop." << endl;
-		c.user.lost_acks = get_lost();
+		string prompt = "Enter an ack to lose or q to stop.";
+		c.user.lost_acks = get_packets(prompt);
 
-		cout << "Enter a packet to lose or q to stop." << endl;
-		c.user.lost_packets = get_lost();
+		prompt = "Enter a packet to lose or q to stop.";
+		c.user.lost_packets = get_packets(prompt);
 
-		cout << "Enter a packet to corrupt or q to stop." << endl;
-		c.user.corrupt_packets = get_lost();
+		prompt = "Enter a packet to corrupt or q to stop.";
+		c.user.corrupt_packets = get_packets(prompt);
 	}
 
 	cout << "Enter protocol (0 - Stop and Wait, 1 - Go-Back-N, 2 - Selective Repeat): ";
