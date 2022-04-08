@@ -116,7 +116,7 @@ int Client::get_current_time() {
 	return chrono::duration_cast<chrono::milliseconds>(chrono::system_clock::now().time_since_epoch()).count();
 }
 
-Frame Client::getNextFrame(FILE* file, bool* read_done, int packets_sent) {
+Frame Client::getNextFrame(FILE* file, bool* read_done, int seq_num) {
 	unsigned char frame_data[this->user.packet_size];
 	memset(frame_data, 0, this->user.packet_size);
 
@@ -141,7 +141,7 @@ Frame Client::getNextFrame(FILE* file, bool* read_done, int packets_sent) {
 		data.push_back(frame_data[i]);
 	}
 
-	Frame f = Frame(packets_sent, data, this->user.header_len);
+	Frame f = Frame(seq_num, data, this->user.header_len);
 	f.checksum = create_checksum(f.data.data(), f.data.size(), 8);
 	return f;
 }

@@ -29,16 +29,18 @@ int StopAndWait::send() {
 	/* to store previous frame for resending if necessary */
 	Frame f = Frame();
 	int last_frame_num = -2;
+	int next_seq_num = 0;
 
 	int start_time = this->client.get_current_time();
 
 	while(true) {
 		if(!resend) {
 			/* read next frame from file */
-			f = this->client.getNextFrame(file, &read_done, this->packets_sent);
+			f = this->client.getNextFrame(file, &read_done, this->next_seq_num);
 			if(read_done) {
 				last_frame_num = f.seq_num;
 			}
+			next_seq_num++;
 		}
 
 		int send_time = this->client.get_current_time();
@@ -72,6 +74,7 @@ int StopAndWait::send() {
 
 		int ack_num = receive_ack(send_time);
 		if(ack_num == -1) {
+			cout << "Packet " << f.seq_num << " ***** Timed Out *****" << endl;
 			resend = true;
 		} else {
 			resend = false;
@@ -132,7 +135,6 @@ int StopAndWait::receive_ack(int send_time) {
 	while(true) {
 		int now = this->client.get_current_time();
 		if(now - send_time > this->client.user.timeout_int) {
-			cout << "Packet " << this->packets_sent << " ***** Timed Out *****" << endl;
 			return -1;
 		} else if(poll(fds, 1, 0) > 0) {
 			/* receive ack */
