@@ -44,7 +44,7 @@ string get_md5(string file_path) {
 }
 
 string uchar_to_binary(unsigned char c) {
-	char binary[8];
+	char binary[9];
 	char *bp = binary;
 
 	for(int i = 7; i >= 0; i--) {
