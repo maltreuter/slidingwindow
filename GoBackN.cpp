@@ -47,8 +47,8 @@ int GoBackN::send() {
 				current_window.push(f);
 				next_seq_num++;
 
-				/* send current frame */
-				bytes_sent = this->client.send_frame(f);
+				/* send current frame while checking for user specified errors */
+				bytes_sent = this->client.send_frame_with_errors(f);
 
 				if(bytes_sent == -1) {
 					continue;
@@ -56,10 +56,13 @@ int GoBackN::send() {
 
 				cout << "Packet " << f.seq_num << " sent" << endl;
 
-				this->total_bytes_sent += bytes_sent;
-
-				/* lose this packet  */
-				// cout << "Packet " << f.seq_num << " lost" << endl;
+				/* send_frame_with_errors returns -2 if packet was "lost" */
+				if(bytes_sent == -2) {
+					cout << "Packet " << f.seq_num << " lost" << endl;
+					this->total_bytes_sent += this->client.user.header_len + f.data.size();
+				} else {
+					this->total_bytes_sent += bytes_sent;
+				}
 
 				/* we still "sent" the packet, it just got lost on the way */
 				original_packets++;
@@ -135,15 +138,8 @@ int GoBackN::send() {
 
 	/* tell the server we are done sending frames */
 	/* read_done set when we got EOF from fread */
-	bytes_sent = sendto(this->client.sockfd,
-		"done",
-		4,
-		0,
-		this->client.server_addr,
-		this->client.server_addr_len
-	);
+	bytes_sent = this->client.send_to_server("done");
 	if(bytes_sent == -1) {
-		perror("sendto");
 		exit(1);
 	}
 	this->total_bytes_sent += bytes_sent;

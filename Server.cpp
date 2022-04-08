@@ -159,6 +159,7 @@ int Server::stop_and_wait(FILE* file) {
 	int bytes_sent;
 
 	while(!write_done) {
+		/* receive a packet */
 		char buffer[this->conn_info.packet_size + this->conn_info.header_len + 1];
 		memset(buffer, 0, this->conn_info.packet_size + this->conn_info.header_len + 1);
 
@@ -190,28 +191,29 @@ int Server::stop_and_wait(FILE* file) {
 		memcpy(header, buffer, this->conn_info.header_len);
 		memcpy(data, buffer + this->conn_info.header_len, bytes_rcvd - this->conn_info.header_len);
 
-		// cout << "size of data: " << sizeof(data) << endl;
-
 		string header_s(header, header + sizeof(header));
 
 		string checksum_s = header_s.substr(0, this->conn_info.header_len / 2);
 		string seq_num_s = header_s.substr(this->conn_info.header_len / 2, this->conn_info.header_len / 2);
 
-		if(check_checksum(checksum_s, data, sizeof(data), 8)) {
-			/* send ack and write buffer to file */
-			ack = "ack" + seq_num_s;
-			int seq_num = stoi(seq_num_s);
+		ack = "ack" + seq_num_s;
+		int seq_num = stoi(seq_num_s);
 
-			cout << "Packet " << seq_num << " received" << endl;
+		cout << "Packet " << seq_num << " received" << endl;
+
+		if(check_checksum(checksum_s, data, sizeof(data), 8)) {
 			cout << "Checksum OK" << endl;
 			this->conn_info.last_seq_num = seq_num;
 
 			// check if we should lose any acks
 			vector<int>::iterator position = find(this->conn_info.lost_acks.begin(), this->conn_info.lost_acks.end(), seq_num);
 			if(position != this->conn_info.lost_acks.end()) {
+				/* ack was "sent", but never got to client */
+				cout << "Ack " << seq_num << " sent" << endl;
 				cout << "Ack " << seq_num << " lost" << endl;
 				this->conn_info.lost_acks.erase(position);
 			} else {
+				/* send ack and write buffer to file */
 				bytes_sent = sendto(this->sockfd,
 					ack.c_str(),
 					ack.length(),
@@ -237,6 +239,9 @@ int Server::stop_and_wait(FILE* file) {
 
 		cout << endl;
 	}
+
+	/* client tells us how many packets were retransmitted because idrk how else to do it */
+	this->conn_info.original_packets = this->conn_info.packets_rcvd - stoi(receive_string());
 
 	return 0;
 }
@@ -304,6 +309,9 @@ int Server::go_back_n(FILE* file) {
 		vector<int>::iterator position = find(this->conn_info.lost_acks.begin(), this->conn_info.lost_acks.end(), seq_num);
 		if(checksum && position != this->conn_info.lost_acks.end()) {
 			cout << "Checksum OK" << endl;
+
+			/* ack was "sent", but never got to client */
+			cout << "Ack " << seq_num << " sent" << endl;
 			cout << "Ack " << seq_num << " lost" << endl;
 			this->conn_info.lost_acks.erase(position);
 		} else {
@@ -430,6 +438,8 @@ int Server::selective_repeat(FILE* file) {
 			/* lose acks */
 			vector<int>::iterator position = find(this->conn_info.lost_acks.begin(), this->conn_info.lost_acks.end(), seq_num);
 			if(position != this->conn_info.lost_acks.end()) {
+				/* ack was "sent", but never got to client */
+				cout << "Ack " << seq_num << " sent" << endl;
 				cout << "Ack " << seq_num << " lost" << endl;
 				this->conn_info.lost_acks.erase(position);
 			} else {

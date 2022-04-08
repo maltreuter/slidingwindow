@@ -42,26 +42,24 @@ int SelectiveRepeat::send() {
 				current_window.push_back(f);
 				next_seq_num++;
 
-				/* lose specific packets */
-				vector<int>::iterator position = find(this->client.user.lost_packets.begin(), this->client.user.lost_packets.end(), f.seq_num);
-				if(position == this->client.user.lost_packets.end()){
+				/* send current frame while checking for user specified errors */
+				bytes_sent = this->client.send_frame_with_errors(f);
 
-					bytes_sent = this->client.send_frame(f);
-
-					if(bytes_sent == -1) {
-						continue;
-					}
-
-
-					cout << "Packet " << f.seq_num << " sent" << endl;
-
-					this->total_bytes_sent += bytes_sent;
-				} else {
-					/* lose this packet and remove it from lost_packets */
-					cout << "Packet " << f.seq_num << " lost" << endl;
-					this->client.user.lost_packets.erase(position);
+				if(bytes_sent == -1) {
+					continue;
 				}
 
+				cout << "Packet " << f.seq_num << " sent" << endl;
+
+				/* send_frame_with_errors returns -2 if packet was "lost" */
+				if(bytes_sent == -2) {
+					cout << "Packet " << f.seq_num << " lost" << endl;
+					this->total_bytes_sent += this->client.user.header_len + f.data.size();
+				} else {
+					this->total_bytes_sent += bytes_sent;
+				}
+
+				/* we still "sent" the packet, it just got lost on the way */
 				original_packets++;
 				packets_sent++;
 			}
@@ -178,15 +176,8 @@ int SelectiveRepeat::send() {
 
 	/* tell the server we are done sending frames */
 	/* read_done set when we got EOF from fread */
-	bytes_sent = sendto(this->client.sockfd,
-		"done",
-		4,
-		0,
-		this->client.server_addr,
-		this->client.server_addr_len
-	);
+	bytes_sent = this->client.send_to_server("done");
 	if(bytes_sent == -1) {
-		perror("sendto");
 		exit(1);
 	}
 	this->total_bytes_sent += bytes_sent;

@@ -47,10 +47,11 @@ class Client {
 		int connect();
 		int disconnect();
 		int handshake();
-		bool send_to_server(string send_str);
+		int send_to_server(string send_str);
 		int get_current_time();
 		Frame getNextFrame(FILE* file, bool* read_done, int packets_sent);
 		int send_frame(Frame f);
+		int send_frame_with_errors(Frame f);
 		string create_checksum(unsigned char *data, int dataLength, int blockSize);
 };
 

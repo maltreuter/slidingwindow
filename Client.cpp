@@ -61,34 +61,34 @@ int Client::handshake() {
 	// cout << this->user.header_len << endl;
 	//
 
-	if(!send_to_server(to_string(this->user.packet_size))) {
+	if(send_to_server(to_string(this->user.packet_size)) == -1) {
 		return -1;
 	}
 	
 	/* send header len to server */
-	if(!send_to_server(to_string(this->user.header_len))) {
+	if(send_to_server(to_string(this->user.header_len)) == -1) {
 		return -1;
 	}
 	
 	/* send protocol to server */
-	if(!send_to_server(to_string(this->user.protocol))) {
+	if(send_to_server(to_string(this->user.protocol)) == -1) {
 		return -1;
 	}
 
 	/* send errors */
-	if(!send_to_server(to_string(this->user.errors))) {
+	if(send_to_server(to_string(this->user.errors)) == -1) {
 		return -1;
 	}
 
 	/* send acks to lose */
 	if(this->user.errors == 1) {
-		if(!send_to_server(vector_to_string(this->user.lost_acks))) {
+		if(send_to_server(vector_to_string(this->user.lost_acks)) == -1) {
 			return -1;
 		}
 	}
 
 	/* send window size */
-	if(!send_to_server(to_string(this->user.window_size))) {
+	if(send_to_server(to_string(this->user.window_size)) == -1) {
 		return -1;
 	}
 	
@@ -106,10 +106,10 @@ bool Client::send_to_server(string send_str) {
 
 	if(bytes_sent == -1) {
 		perror("sendto");
-		return false;
+		return bytes_sent;
 	}
 
-	return true;
+	return bytes_sent;
 }
 
 int Client::get_current_time() {
@@ -147,39 +147,39 @@ Frame Client::getNextFrame(FILE* file, bool* read_done, int packets_sent) {
 }
 
 int Client::send_frame(Frame f) {
+	/* package frame for delivery */
+	int buffer_size = this->user.header_len + f.data.size();
+	unsigned char curr_frame[buffer_size];
+
+	string header = f.checksum + f.padSeqNum();
+
+	memcpy(curr_frame, header.c_str(), header.length());
+	memcpy(curr_frame + header.length(), f.data.data(), f.data.size());
+
+	/* send frame */
+	int bytes_sent = sendto(this->sockfd,
+		curr_frame,
+		this->user.header_len + f.data.size(),
+		0,
+		this->server_addr,
+		this->server_addr_len
+	);
+
+	if(bytes_sent == -1) {
+		perror("sendto");
+	}
+
+	return bytes_sent;
+}
+
+int Client::send_frame_with_errors(Frame f) {
 	/* check if packet should be lost */
 	vector<int>::iterator position = find(this->user.lost_packets.begin(), this->user.lost_packets.end(), f.seq_num);
 
 	/* if packet should not be lost */
 	if(position == this->user.lost_packets.end()) {
-
-		/* check if packet should be corrupted */
-
-		/* package frame for delivery */
-		int buffer_size = this->user.header_len + f.data.size();
-		unsigned char curr_frame[buffer_size];
-
-		string header = f.checksum + f.padSeqNum();
-		// cout << "header: " << header << endl;
-		// cout << "header size: " << header.length() << endl;
-
-		memcpy(curr_frame, header.c_str(), header.length());
-		memcpy(curr_frame + header.length(), f.data.data(), f.data.size());
-
-		/* send frame */
-		int bytes_sent = sendto(this->sockfd,
-			curr_frame,
-			this->user.header_len + f.data.size(),
-			0,
-			this->server_addr,
-			this->server_addr_len
-		);
-
-		if(bytes_sent == -1) {
-			perror("sendto");
-		}
-
-		return bytes_sent;
+		/* send it */
+		return send_frame(f);
 	} else {
 		/* remove from lost_packets */
 		this->user.lost_packets.erase(position);

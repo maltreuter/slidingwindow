@@ -43,8 +43,8 @@ int StopAndWait::send() {
 
 		int send_time = this->client.get_current_time();
 
-		/* send current frame */
-		bytes_sent = this->client.send_frame(f);
+		/* send current frame while checking for user specified errors */
+		bytes_sent = this->client.send_frame_with_errors(f);
 
 		if(bytes_sent == -1) {
 			/* some error sending, resend the frame */
@@ -60,7 +60,7 @@ int StopAndWait::send() {
 			original_packets++;
 		}
 
-		/* send_frame returns -2 if packet was "lost" */
+		/* send_frame_with_errors returns -2 if packet was "lost" */
 		if(bytes_sent == -2) {
 			/* we still "sent" the packet, it just got lost on the way */
 			cout << "Packet " << f.seq_num << " lost" << endl;
@@ -91,18 +91,20 @@ int StopAndWait::send() {
 	/* tell the server we are done sending frames */
 	/* read_done set when we got EOF from fread */
 	if(read_done) {
-		bytes_sent = sendto(this->client.sockfd,
-			"done",
-			4,
-			0,
-			this->client.server_addr,
-			this->client.server_addr_len
-		);
+		bytes_sent = this->client.send_to_server("done");
+
 		if(bytes_sent == -1) {
-			perror("sendto");
 			exit(1);
 		}
+
 		this->total_bytes_sent += bytes_sent;
+	}
+
+	/* tell the server how many packets were retransmitted because idrk how else to do it */
+	bytes_sent = this->client.send_to_server(to_string(resent_packets));
+
+	if(bytes_sent == -1) {
+		exit(1);
 	}
 
 	/* print stats */
