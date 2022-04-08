@@ -48,6 +48,7 @@ class Server {
 		void start_server();
 		int handle_connections(int n_loops);
 		int handshake();
+		string receive_string();
 		int stop_and_wait(FILE* file);
 		int go_back_n(FILE* file);
 		int selective_repeat(FILE* file);

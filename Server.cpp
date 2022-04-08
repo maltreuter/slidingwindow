@@ -108,57 +108,43 @@ int Server::handshake() {
 		-1
 	};
 
-	this->conn_info.lost_acks = vector<int>();
-	this->conn_info.lost_acks.push_back(20);
-	this->conn_info.lost_acks.push_back(50);
-
-	/* receive packet size from user input in the client */
-	char packet_size[8];
-	int bytes_rcvd = recvfrom(this->sockfd, packet_size, 7, 0, (struct sockaddr *) &this->conn_info.client_addr, &this->conn_info.addr_size);
-	if(bytes_rcvd == -1) {
-		perror("recvfrom");
-		exit(1);
-	}
-	packet_size[bytes_rcvd] = '\0';
-
-	this->conn_info.packet_size = atoi(packet_size);
+	/* receive packet size */
+	this->conn_info.packet_size = stoi(receive_string());
+	cout << this->conn_info.packet_size << endl;
 
 	/* receive header length */
-	char header_len[8];
-	bytes_rcvd = recvfrom(this->sockfd, header_len, 7, 0, (struct sockaddr *) &this->conn_info.client_addr, &this->conn_info.addr_size);
-	if(bytes_rcvd == -1) {
-		perror("recvfrom");
-		exit(1);
-	}
-	header_len[bytes_rcvd] = '\0';
-
-	this->conn_info.header_len = atoi(header_len);
+	this->conn_info.header_len = stoi(receive_string());
+	cout << this->conn_info.header_len << endl;
 
 	/* receive protocol */
-	char protocol[8];
-	bytes_rcvd = recvfrom(this->sockfd, protocol, 7, 0, (struct sockaddr *) &this->conn_info.client_addr, &this->conn_info.addr_size);
-	if(bytes_rcvd == -1) {
-		perror("recvfrom");
-		exit(1);
-	}
-	protocol[bytes_rcvd] = '\0';
-
-	this->conn_info.protocol = atoi(protocol);
+	this->conn_info.protocol = stoi(receive_string());
+	cout << this->conn_info.protocol << endl;
 
 	/* Receive errors */
+	this->conn_info.errors = stoi(receive_string());
+	cout << this->conn_info.errors << endl;
+	
+	if(this->conn_info.errors == 1) {
+		this->conn_info.lost_acks = string_to_vector(receive_string());
+	}
 
 	/* Receive window size */
-	char window_size[8];
-	bytes_rcvd = recvfrom(this->sockfd, window_size, 7, 0, (struct sockaddr *) &this->conn_info.client_addr, &this->conn_info.addr_size);
+	this->conn_info.window_size = stoi(receive_string());
+
+	return 0;
+}
+
+string Server::receive_string() {
+	char buff[1024];
+	memset(buff, 0, sizeof(buff));
+
+	int bytes_rcvd = recvfrom(this->sockfd, buff, sizeof(buff), 0, (struct sockaddr *) &this->conn_info.client_addr, &this->conn_info.addr_size);
 	if(bytes_rcvd == -1) {
 		perror("recvfrom");
 		exit(1);
 	}
-	window_size[bytes_rcvd] = '\0';
 
-	this->conn_info.window_size = atoi(window_size);
-
-	return 0;
+	return string(buff);
 }
 
 int Server::stop_and_wait(FILE* file) {

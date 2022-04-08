@@ -31,6 +31,8 @@ typedef struct user_input {
 	int protocol;
 	int header_len;
 	vector<int> lost_packets;
+	vector<int> lost_acks;
+	vector<int> corrupt_packets;
 } user_input;
 
 class Client {
@@ -45,6 +47,7 @@ class Client {
 		int connect();
 		int disconnect();
 		int handshake();
+		bool send_to_server(string send_str);
 		int get_current_time();
 		Frame getNextFrame(FILE* file, bool* read_done, int packets_sent);
 		int send_frame(Frame f);

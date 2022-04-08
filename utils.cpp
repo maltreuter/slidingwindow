@@ -53,3 +53,24 @@ string uchar_to_binary(unsigned char c) {
 
 	return string(binary);
 }
+
+string vector_to_string(vector<int> packets) {
+	string result;
+	for(size_t i = 0; i < packets.size(); i++) {
+		result += to_string(packets[i]) + " ";
+	}
+
+	return result;
+}
+
+vector<int> string_to_vector(string packets) {
+	vector<int> result = vector<int>();
+	string temp;
+	stringstream ss(packets);
+
+	while(getline(ss, temp, ' ')) {
+		result.push_back(stoi(temp));
+	}
+
+	return result;
+}

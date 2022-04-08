@@ -13,7 +13,10 @@ Client::Client() {
 		-1, /* situational errors */
 		-1, /* protocol */
 		16, /* header length */
-		vector<int>() /* lost packets */
+		vector<int>(), /* lost packets */
+		vector<int>(), /* lost_acks */
+		vector<int>() /*corrupt_packets */
+		
 	};
 
 	this->sockfd = -1;
@@ -56,61 +59,57 @@ int Client::handshake() {
 	/* send packet size to server */
 	// cout << this->user.packet_size << endl;
 	// cout << this->user.header_len << endl;
+	//
 
-	int bytes_sent = sendto(this->sockfd,
-		to_string(this->user.packet_size).c_str(),
-		to_string(this->user.packet_size).length(),
-		0,
-		this->server_addr,
-		this->server_addr_len
-	);
-	if(bytes_sent == -1) {
-		perror("sendto");
+	if(!send_to_server(to_string(this->user.packet_size))) {
 		return -1;
 	}
-
+	
 	/* send header len to server */
-	bytes_sent = sendto(this->sockfd,
-		to_string(this->user.header_len).c_str(),
-		to_string(this->user.header_len).length(),
-		0,
-		this->server_addr,
-		this->server_addr_len
-	);
-	if(bytes_sent == -1) {
-		perror("sendto");
+	if(!send_to_server(to_string(this->user.header_len))) {
 		return -1;
 	}
-
+	
 	/* send protocol to server */
-	bytes_sent = sendto(this->sockfd,
-	to_string(this->user.protocol).c_str(),
-	to_string(this->user.protocol).length(),
-	0,
-	this->server_addr,
-	this->server_addr_len
-	);
-	if(bytes_sent == -1) {
-		perror("sendto");
+	if(!send_to_server(to_string(this->user.protocol))) {
 		return -1;
 	}
 
 	/* send errors */
+	if(!send_to_server(to_string(this->user.errors))) {
+		return -1;
+	}
+
+	/* send acks to lose */
+	if(this->user.errors == 1) {
+		if(!send_to_server(vector_to_string(this->user.lost_acks))) {
+			return -1;
+		}
+	}
 
 	/* send window size */
-	bytes_sent = sendto(this->sockfd,
-	to_string(this->user.window_size).c_str(),
-	to_string(this->user.window_size).length(),
+	if(!send_to_server(to_string(this->user.window_size))) {
+		return -1;
+	}
+	
+	return 0;
+}
+
+bool Client::send_to_server(string send_str) {
+	int bytes_sent = sendto(this->sockfd,
+	send_str.c_str(),
+	send_str.length(),
 	0,
 	this->server_addr,
 	this->server_addr_len
 	);
+
 	if(bytes_sent == -1) {
 		perror("sendto");
-		return -1;
+		return false;
 	}
 
-	return 0;
+	return true;
 }
 
 int Client::get_current_time() {

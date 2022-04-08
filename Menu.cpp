@@ -8,23 +8,22 @@
 
 using namespace std;
 
-vector<int> get_lost_packets();
+vector<int> get_lost();
 
-vector<int> get_lost_packets() {
-	vector<int> lost_packets = vector<int>();
+vector<int> get_lost() {
+	vector<int> lost = vector<int>();
 
 	while(true) {
-		cout << "Enter a packet to lose or q to stop." << endl;
 		string input;
 		cin >> input;
 
 		if(input == "q") {
 			break;
 		}
-		lost_packets.push_back(stoi(input));
+		lost.push_back(stoi(input));
 	}
 
-	return lost_packets;
+	return lost;
 }
 
 int main(int argc, char *argv[]) {
@@ -63,15 +62,24 @@ int main(int argc, char *argv[]) {
 	}
 
 	cout << "Enter situational errors (0 - None, 1 - Random, 2 - User Spec): ";
-	cin >> c.user.errors;
+	int sit_errors;
+	cin >> sit_errors;
+	
+	if(sit_errors == 0) {
+		c.user.errors = 0;
+	} else {
+		c.user.errors = 1;
+	}
 
-	if(c.user.errors == 2) {
-		c.user.lost_packets = get_lost_packets();
-		cout << "[";
-		for(int i = 0; i < (int) c.user.lost_packets.size(); i++) {
-			cout << c.user.lost_packets[i] << " ";
-		}
-		cout << "]" << endl;
+	if(sit_errors == 2) {
+		cout << "Enter an ack to lose or q to stop." << endl;
+		c.user.lost_acks = get_lost();
+
+		cout << "Enter a packet to lose or q to stop." << endl;
+		c.user.lost_packets = get_lost();
+
+		cout << "Enter a packet to corrupt or q to stop." << endl;
+		c.user.corrupt_packets = get_lost();
 	}
 
 	cout << "Enter protocol (0 - Stop and Wait, 1 - Go-Back-N, 2 - Selective Repeat): ";
