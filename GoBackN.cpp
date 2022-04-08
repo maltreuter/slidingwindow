@@ -47,8 +47,12 @@ int GoBackN::send() {
 				current_window.push(f);
 				next_seq_num++;
 
-				/* send current frame while checking for user specified errors */
-				bytes_sent = this->client.send_frame_with_errors(f);
+				if(this->client.user.errors != 0) {
+					/* send current frame while checking for user specified errors */
+					bytes_sent = this->client.send_frame_with_errors(f);
+				} else {
+					bytes_sent = this->client.send_frame(f, false);
+				}
 
 				if(bytes_sent == -1) {
 					continue;

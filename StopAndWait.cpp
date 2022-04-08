@@ -41,9 +41,14 @@ int StopAndWait::send() {
 				last_frame_num = f.seq_num;
 			}
 			next_seq_num++;
-			/* send current frame while checking for user specified errors */
-			bytes_sent = this->client.send_frame_with_errors(f);
+			if(this->client.user.errors != 0) {
+				/* send current frame while checking for user specified errors */
+				bytes_sent = this->client.send_frame_with_errors(f);
+			} else {
+				bytes_sent = this->client.send_frame(f, false);
+			}
 		} else {
+			/* errors will only be checked on the first time a frame is sent */
 			bytes_sent = this->client.send_frame(f, true);
 		}
 
