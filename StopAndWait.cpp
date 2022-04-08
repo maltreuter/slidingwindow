@@ -59,6 +59,7 @@ int StopAndWait::send() {
 			cout << "Packet " << f.seq_num << " sent" << endl;
 			original_packets++;
 		}
+		this->packets_sent++;
 
 		/* send_frame_with_errors returns -2 if packet was "lost" */
 		if(bytes_sent == -2) {
@@ -153,8 +154,6 @@ int StopAndWait::receive_ack(int send_time) {
 			string ack_num_s = string(ack).substr(3, this->client.user.header_len / 2);
 			int ack_num = stoi(ack_num_s);
 			cout << "Ack " << ack_num << " received" << endl;
-
-			this->packets_sent++;
 
 			return ack_num;
 		}
