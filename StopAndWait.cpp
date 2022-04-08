@@ -36,7 +36,7 @@ int StopAndWait::send() {
 	while(true) {
 		if(!resend) {
 			/* read next frame from file */
-			f = this->client.getNextFrame(file, &read_done, this->next_seq_num);
+			f = this->client.getNextFrame(file, &read_done, next_seq_num);
 			if(read_done) {
 				last_frame_num = f.seq_num;
 			}
