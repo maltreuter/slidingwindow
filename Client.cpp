@@ -147,33 +147,44 @@ Frame Client::getNextFrame(FILE* file, bool* read_done, int packets_sent) {
 }
 
 int Client::send_frame(Frame f) {
-	/* package frame for delivery */
-	int buffer_size = this->user.header_len + f.data.size();
-	unsigned char curr_frame[buffer_size];
+	/* check if packet should be lost */
+	vector<int>::iterator position = find(this->user.lost_packets.begin(), this->user.lost_packets.end(), f.seq_num);
 
-	string header = f.checksum + f.padSeqNum();
-	// cout << "header: " << header << endl;
-	// cout << "header size: " << header.length() << endl;
+	/* if packet should not be lost */
+	if(position == this->user.lost_packets.end()) {
 
-	memcpy(curr_frame, header.c_str(), header.length());
-	memcpy(curr_frame + header.length(), f.data.data(), f.data.size());
+		/* check if packet should be corrupted */
 
-	/* send frame */
-	int bytes_sent = sendto(this->sockfd,
-		curr_frame,
-		this->user.header_len + f.data.size(),
-		0,
-		this->server_addr,
-		this->server_addr_len
-	);
+		/* package frame for delivery */
+		int buffer_size = this->user.header_len + f.data.size();
+		unsigned char curr_frame[buffer_size];
 
-	if(bytes_sent == -1) {
-		perror("sendto");
+		string header = f.checksum + f.padSeqNum();
+		// cout << "header: " << header << endl;
+		// cout << "header size: " << header.length() << endl;
+
+		memcpy(curr_frame, header.c_str(), header.length());
+		memcpy(curr_frame + header.length(), f.data.data(), f.data.size());
+
+		/* send frame */
+		int bytes_sent = sendto(this->sockfd,
+			curr_frame,
+			this->user.header_len + f.data.size(),
+			0,
+			this->server_addr,
+			this->server_addr_len
+		);
+
+		if(bytes_sent == -1) {
+			perror("sendto");
+		}
+
+		return bytes_sent;
+	} else {
+		/* remove from lost_packets */
+		this->user.lost_packets.erase(position);
+		return -2;
 	}
-
-	// cout << "bytes sent: " << bytes_sent << endl;
-
-	return bytes_sent;
 }
 
 string Client::create_checksum(unsigned char *data, int dataLength, int blockSize) {

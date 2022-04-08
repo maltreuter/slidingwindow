@@ -34,6 +34,7 @@ int StopAndWait::send() {
 
 	while(true) {
 		if(!resend) {
+			/* read next frame from file */
 			f = this->client.getNextFrame(file, &read_done, this->packets_sent);
 			if(read_done) {
 				last_frame_num = f.seq_num;
@@ -42,31 +43,30 @@ int StopAndWait::send() {
 
 		int send_time = this->client.get_current_time();
 
-		/* lose specific packets */
-		vector<int>::iterator position = find(this->client.user.lost_packets.begin(), this->client.user.lost_packets.end(), f.seq_num);
-		if(position == this->client.user.lost_packets.end()){
-			/* lost_packets does not contain f.seq_num */
-			/* send current frame */
-			bytes_sent = this->client.send_frame(f);
+		/* send current frame */
+		bytes_sent = this->client.send_frame(f);
 
-			if(bytes_sent == -1) {
-				resend = true;
-				continue;
-			}
+		if(bytes_sent == -1) {
+			/* some error sending, resend the frame */
+			resend = true;
+			continue;
+		}
 
-			this->total_bytes_sent += bytes_sent;
-
-			if(resend) {
-				cout << "Packet " << f.seq_num << " retransmitted" << endl;
-				resent_packets++;
-			} else {
-				cout << "Packet " << f.seq_num << " sent" << endl;
-				original_packets++;
-			}
+		if(resend) {
+			cout << "Packet " << f.seq_num << " retransmitted" << endl;
+			resent_packets++;
 		} else {
-			/* lose this packet and remove it from lost_packets */
+			cout << "Packet " << f.seq_num << " sent" << endl;
+			original_packets++;
+		}
+
+		/* send_frame returns -2 if packet was "lost" */
+		if(bytes_sent == -2) {
+			/* we still "sent" the packet, it just got lost on the way */
 			cout << "Packet " << f.seq_num << " lost" << endl;
-			this->client.user.lost_packets.erase(position);
+			this->total_bytes_sent += this->client.user.header_len + f.data.size();
+		} else {
+			this->total_bytes_sent += bytes_sent;
 		}
 
 		int ack_num = receive_ack(send_time);

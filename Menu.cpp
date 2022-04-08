@@ -23,6 +23,7 @@ vector<int> get_packets(string prompt) {
 		}
 		packets.push_back(stoi(input));
 	}
+	cout << endl;
 
 	return packets;
 }
