@@ -95,7 +95,7 @@ int Client::handshake() {
 	return 0;
 }
 
-bool Client::send_to_server(string send_str) {
+int Client::send_to_server(string send_str) {
 	int bytes_sent = sendto(this->sockfd,
 	send_str.c_str(),
 	send_str.length(),
