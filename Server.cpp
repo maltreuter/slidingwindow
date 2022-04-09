@@ -200,6 +200,10 @@ int Server::stop_and_wait(FILE* file) {
 		int seq_num = stoi(seq_num_s);
 
 		cout << "Packet " << seq_num << " received" << endl;
+		this->conn_info.packets_rcvd++;
+		if(resent == 0) {
+			this->conn_info.original_packets++;
+		}
 
 		if(check_checksum(checksum_s, data, sizeof(data), 8)) {
 			cout << "Checksum OK" << endl;
@@ -210,7 +214,7 @@ int Server::stop_and_wait(FILE* file) {
 			if(position != this->conn_info.lost_acks.end()) {
 				/* ack was "sent", but never got to client */
 				cout << "Ack " << seq_num << " sent" << endl;
-				cout << "Ack " << seq_num << " lost" << " (for packet " << this->conn_info.original_packets << ")" << endl;
+				cout << "Ack " << seq_num << " lost" << " (for packet number " << this->conn_info.original_packets << ")" << endl;
 				this->conn_info.lost_acks.erase(position);
 			} else {
 				/* send ack and write buffer to file */
@@ -234,11 +238,6 @@ int Server::stop_and_wait(FILE* file) {
 			}
 		} else {
 			cout << "Checksum failed" << endl;
-		}
-
-		this->conn_info.packets_rcvd++;
-		if(resent == 0) {
-			this->conn_info.original_packets++;
 		}
 
 		cout << endl;
@@ -302,6 +301,11 @@ int Server::go_back_n(FILE* file) {
 		int seq_num = stoi(seq_num_s);
 
 		cout << "Packet " << seq_num << " received" << endl;
+		this->conn_info.packets_rcvd++;
+		this->conn_info.last_seq_num = seq_num;
+		if(resent == 0) {
+			this->conn_info.original_packets++;
+		}
 
 		bool checksum = check_checksum(checksum_s, data, sizeof(data), 8);
 
@@ -312,7 +316,7 @@ int Server::go_back_n(FILE* file) {
 
 			/* ack was "sent", but never got to client */
 			cout << "Ack " << seq_num << " sent" << endl;
-			cout << "Ack " << seq_num << " lost" << " (for packet " << this->conn_info.original_packets << ")" << endl;
+			cout << "Ack " << seq_num << " lost" << " (for packet number " << this->conn_info.original_packets << ")" << endl;
 			this->conn_info.lost_acks.erase(position);
 		} else {
 			/* send ack and write buffer to file */
@@ -362,12 +366,6 @@ int Server::go_back_n(FILE* file) {
 		}
 		cout << "Current window = [" << expected_seq_num << "]" << endl;
 		cout << endl;
-
-		this->conn_info.packets_rcvd++;
-		this->conn_info.last_seq_num = seq_num;
-		if(resent == 0) {
-			this->conn_info.original_packets++;
-		}
 	}
 
 	return 0;
@@ -424,6 +422,11 @@ int Server::selective_repeat(FILE* file) {
 		int seq_num = stoi(seq_num_s);
 
 		cout << "Packet " << seq_num << " received" << endl;
+		this->conn_info.last_seq_num = seq_num;
+		this->conn_info.packets_rcvd++;
+		if(resent == 0) {
+			this->conn_info.original_packets++;
+		}
 
 		bool checksum = check_checksum(checksum_s, data, sizeof(data), 8);
 
@@ -443,7 +446,7 @@ int Server::selective_repeat(FILE* file) {
 			if(position != this->conn_info.lost_acks.end()) {
 				/* ack was "sent", but never got to client */
 				cout << "Ack " << seq_num << " sent" << endl;
-				cout << "Ack " << seq_num << " lost" << " (for packet " << this->conn_info.original_packets << ")" << endl;
+				cout << "Ack " << seq_num << " lost" << " (for packet number " << this->conn_info.original_packets << ")" << endl;
 				this->conn_info.lost_acks.erase(position);
 			} else {
 				/* send ack */
@@ -506,12 +509,6 @@ int Server::selective_repeat(FILE* file) {
 			cout << "]" << endl;
 		}
 		cout << endl;
-
-		this->conn_info.last_seq_num = seq_num;
-		this->conn_info.packets_rcvd++;
-		if(resent == 0) {
-			this->conn_info.original_packets++;
-		}
 	}
 
 	return 0;

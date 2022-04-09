@@ -78,13 +78,13 @@ int main(int argc, char *argv[]) {
 	}
 
 	if(sit_errors == 2) {
-		string prompt = "Enter an ack to lose or q to stop.";
+		string prompt = "Enter an ack to lose (nth ack) or q to stop.";
 		c.user.lost_acks = get_packets(prompt);
 
-		prompt = "Enter a packet to lose or q to stop.";
+		prompt = "Enter a packet to lose (nth packet) or q to stop.";
 		c.user.lost_packets = get_packets(prompt);
 
-		prompt = "Enter a packet to corrupt or q to stop.";
+		prompt = "Enter a packet (nth packet) to corrupt or q to stop.";
 		c.user.corrupt_packets = get_packets(prompt);
 	}
 
