@@ -132,7 +132,7 @@ Frame Client::getNextFrame(FILE* file, bool* read_done, int seq_num) {
 			exit(1);
 		}
 		if(feof(file) != 0) {	/* end of file = true */
-			cout << "end of file caught" << endl;
+			cout << "end of file caught" << endl << endl;
 			fclose(file);
 			*read_done = true;
 		}

@@ -209,19 +209,17 @@ int Server::stop_and_wait(FILE* file) {
 			cout << "Checksum OK" << endl;
 			cout << "Ack " << seq_num << " sent" << endl;
 
-			if(seq_num > this->conn_info.last_seq_num) {
+			if(seq_num != this->conn_info.last_seq_num) {
 				bytes_written = fwrite(data, 1, bytes_rcvd - sizeof(header), file);
 				this->conn_info.total_bytes_written += bytes_written;
 			}
-
 			this->conn_info.last_seq_num = seq_num;
 
 			/* lose acks */
-			vector<int>::iterator position = find(this->conn_info.lost_acks.begin(), this->conn_info.lost_acks.end(), this->conn_info.original_packets + 1);
+			vector<int>::iterator position = find(this->conn_info.lost_acks.begin(), this->conn_info.lost_acks.end(), this->conn_info.original_packets);
 			if(position != this->conn_info.lost_acks.end()) {
 				/* ack was "sent", but never got to client */
-				cout << "Ack " << seq_num << " sent" << endl;
-				cout << "Ack " << seq_num << " lost" << " (for packet number " << this->conn_info.original_packets + 1 << ")" << endl;
+				cout << "Ack " << seq_num << " lost" << " (for packet number " << this->conn_info.original_packets << ")" << endl;
 				this->conn_info.lost_acks.erase(position);
 			} else {
 				/* send ack and write buffer to file */
@@ -327,12 +325,10 @@ int Server::go_back_n(FILE* file) {
 			last_ack_num = seq_num;
 
 			/* lose acks */
-			vector<int>::iterator position = find(this->conn_info.lost_acks.begin(), this->conn_info.lost_acks.end(), this->conn_info.original_packets + 1);
+			vector<int>::iterator position = find(this->conn_info.lost_acks.begin(), this->conn_info.lost_acks.end(), this->conn_info.original_packets);
 			if(position != this->conn_info.lost_acks.end()) {
-				cout << "Checksum OK" << endl;
-
 				/* ack was "sent", but never got to client */
-				cout << "Ack " << seq_num << " lost" << " (for packet number " << this->conn_info.original_packets + 1 << ")" << endl;
+				cout << "Ack " << seq_num << " lost" << " (for packet number " << this->conn_info.original_packets << ")" << endl;
 				this->conn_info.lost_acks.erase(position);
 			} else {
 				bytes_sent = sendto(this->sockfd,
@@ -471,10 +467,10 @@ int Server::selective_repeat(FILE* file) {
 			cout << "Ack " << seq_num << " sent" << endl;
 
 			/* lose acks */
-			vector<int>::iterator position = find(this->conn_info.lost_acks.begin(), this->conn_info.lost_acks.end(), this->conn_info.original_packets + 1);
+			vector<int>::iterator position = find(this->conn_info.lost_acks.begin(), this->conn_info.lost_acks.end(), this->conn_info.original_packets);
 			if(position != this->conn_info.lost_acks.end()) {
 				/* ack was "sent", but never got to client */
-				cout << "Ack " << seq_num << " lost" << " (for packet number " << this->conn_info.original_packets + 1 << ")" << endl;
+				cout << "Ack " << seq_num << " lost" << " (for packet number " << this->conn_info.original_packets << ")" << endl;
 				this->conn_info.lost_acks.erase(position);
 			} else {
 				/* send ack */

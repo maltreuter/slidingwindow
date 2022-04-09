@@ -97,7 +97,7 @@ int GoBackN::send() {
 					in_window = true;
 				}
 			} else {
-				if(ack_num >= send_base && ack_num < next_seq_num) {
+				if(ack_num >= send_base && (ack_num < next_seq_num || next_seq_num == 0)) {
 					in_window = true;
 				}
 			}
