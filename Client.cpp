@@ -186,13 +186,16 @@ int Client::send_frame_with_errors(Frame f) {
 	/* if packet should not be lost */
 	if(position == this->user.lost_packets.end()) {
 
+		/* check if packet should be corrupted */
 		position = find(this->user.corrupt_packets.begin(), this->user.corrupt_packets.end(), f.seq_num);
+
 		/* if packet should not be corrupt */
 		if(position == this->user.corrupt_packets.end()) {
 			/* send it */
 			return send_frame(f, false);
 		} else {
 			/* corrupt packet data then send it */
+			swap(f.data[0], f.data[f.data.size() - 1])
 			return send_frame(f, false);
 		}
 
