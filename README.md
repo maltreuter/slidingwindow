@@ -35,7 +35,7 @@ Default values:
 - [x] Menu
 - [x] Send file/acks
 - [x] Timeouts
-- [ ] Situational Errors
+- [x] Situational Errors
 - [x] Error detection (CRC/Internet Checksum)
 - [x] Stop and Wait
 - [x] Go-Back-N

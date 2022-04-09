@@ -31,7 +31,7 @@ int StopAndWait::send() {
 	int last_frame_num = -2;
 	int next_seq_num = 0;
 
-	int start_time = this->client.get_current_time();
+	int start_time = get_current_time();
 
 	while(true) {
 		if(!resend) {
@@ -52,7 +52,7 @@ int StopAndWait::send() {
 			bytes_sent = this->client.send_frame(f, true);
 		}
 
-		int send_time = this->client.get_current_time();
+		int send_time = get_current_time();
 
 		if(bytes_sent == -1) {
 			/* some error sending, resend the frame */
@@ -119,7 +119,7 @@ int StopAndWait::send() {
 	cout << "Total bytes read from file: " << this->total_bytes_read << endl;
 	cout << "Total bytes sent to server: " << this->total_bytes_sent << endl;
 	cout << "md5sum: " << get_md5(this->client.user.file_path) << endl;
-	int time_m = this->client.get_current_time() - start_time;
+	int time_m = get_current_time() - start_time;
 	cout << "Elapsed time: " << time_m << " milliseconds (~" << time_m / 1000 << " seconds)" << endl;
 
 	return 0;
@@ -132,7 +132,7 @@ int StopAndWait::receive_ack(int send_time) {
 
 	/* Receive Ack */
 	while(true) {
-		int now = this->client.get_current_time();
+		int now = get_current_time();
 		if(now - send_time > this->client.user.timeout_int) {
 			return -1;
 		} else if(poll(fds, 1, 0) > 0) {

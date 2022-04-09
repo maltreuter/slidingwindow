@@ -32,7 +32,7 @@ int GoBackN::send() {
 
 	int original_packets = 0;
 	int resent_packets = 0;
-	int start_time = this->client.get_current_time();
+	int start_time = get_current_time();
 
 	while(true) {
 		/* window not full and frames to be sent */
@@ -110,12 +110,12 @@ int GoBackN::send() {
 		} else {
 			if(!timer_running) {
 				timer_running = true;
-				timer_time = this->client.get_current_time();
+				timer_time = get_current_time();
 			}
 		}
 
 		/* if timer == timeout */
-		if(timer_running && this->client.get_current_time() - timer_time > this->client.user.timeout_int) {
+		if(timer_running && get_current_time() - timer_time > this->client.user.timeout_int) {
 			cout << "***** Timed Out *****" << endl;
 			queue<Frame> tmp = current_window;
 			while(!tmp.empty()) {
@@ -135,7 +135,7 @@ int GoBackN::send() {
 				this->total_bytes_sent += bytes_sent;
 
 			}
-			timer_time = this->client.get_current_time();
+			timer_time = get_current_time();
 		}
 
 	}
@@ -157,7 +157,7 @@ int GoBackN::send() {
 	cout << "Total bytes read from file: " << this->total_bytes_read << endl;
 	cout << "Total bytes sent to server: " << this->total_bytes_sent << endl;
 	cout << "md5sum: " << get_md5(this->client.user.file_path) << endl;
-	int time_m = this->client.get_current_time() - start_time;
+	int time_m = get_current_time() - start_time;
 	cout << "Elapsed time: " << time_m << " milliseconds (~" << time_m / 1000 << " seconds)" << endl;
 
 	return 0;

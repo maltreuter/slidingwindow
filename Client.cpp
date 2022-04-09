@@ -112,10 +112,6 @@ int Client::send_to_server(string send_str) {
 	return bytes_sent;
 }
 
-int Client::get_current_time() {
-	return chrono::duration_cast<chrono::milliseconds>(chrono::system_clock::now().time_since_epoch()).count();
-}
-
 Frame Client::getNextFrame(FILE* file, bool* read_done, int seq_num) {
 	unsigned char frame_data[this->user.packet_size];
 	memset(frame_data, 0, this->user.packet_size);

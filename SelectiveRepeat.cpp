@@ -27,7 +27,7 @@ int SelectiveRepeat::send() {
 
 	bool read_done = false;
 	Frame f = Frame();
-	int start_time = this->client.get_current_time();
+	int start_time = get_current_time();
 	int original_packets = 0;
 	int resent_packets = 0;
 
@@ -38,7 +38,7 @@ int SelectiveRepeat::send() {
 				f = this->client.getNextFrame(file, &read_done, next_seq_num);
 				this->total_bytes_read += f.data.size();
 				f.timer_running = true;
-				f.timer_time = this->client.get_current_time();
+				f.timer_time = get_current_time();
 
 				current_window.push_back(f);
 				next_seq_num++;
@@ -122,7 +122,7 @@ int SelectiveRepeat::send() {
 			for(size_t i = 0; i < current_window.size(); i++) {
 				if(current_window[i].seq_num == ack_num) {
 					current_window[i].timer_running = true;
-					current_window[i].timer_time = this->client.get_current_time();
+					current_window[i].timer_time = get_current_time();
 					resend = current_window[i];
 					break;
 				}
@@ -143,7 +143,7 @@ int SelectiveRepeat::send() {
 		}
 
 		/* timer */
-		int current_time = this->client.get_current_time();
+		int current_time = get_current_time();
 		for(size_t i = 0; i < current_window.size(); i++) {
 			if(current_window[i].timer_running && current_time - current_window[i].timer_time > this->client.user.timeout_int) {
 				cout << "Packet " << current_window[i].seq_num << " ***** Timed Out *****" << endl;
@@ -196,7 +196,7 @@ int SelectiveRepeat::send() {
 	cout << "Total bytes read from file: " << this->total_bytes_read << endl;
 	cout << "Total bytes sent to server: " << this->total_bytes_sent << endl;
 	cout << "md5sum: " << get_md5(this->client.user.file_path) << endl;
-	int time_m = this->client.get_current_time() - start_time;
+	int time_m = get_current_time() - start_time;
 	cout << "Elapsed time: " << time_m << " milliseconds (~" << time_m / 1000 << " seconds)" << endl;
 
 	return 0;
