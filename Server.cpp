@@ -97,16 +97,16 @@ int Server::handshake() {
 	this->conn_info = {
 		client_addr,
 		sizeof(client_addr),
-		0,
-		0,
-		0,
-		0,
-		0,
-		0,
-		0,
-		0,
-		0,
-		-1
+		0, /* packet_size */
+		0, /* header_len */
+		0, /* window_size */
+		0, /* max_seq_num */
+		0, /* protocol */
+		0, /* errors */
+		0, /* total_bytes_written */
+		0, /* packets_rcvd */
+		0, /* original_packets */
+		-1 /* last_seq_num */
 	};
 
 	/* receive packet size */
@@ -207,6 +207,13 @@ int Server::stop_and_wait(FILE* file) {
 
 		if(check_checksum(checksum_s, data, sizeof(data), 8)) {
 			cout << "Checksum OK" << endl;
+			cout << "Ack " << seq_num << " sent" << endl;
+
+			if(seq_num > this->conn_info.last_seq_num) {
+				bytes_written = fwrite(data, 1, bytes_rcvd - sizeof(header), file);
+				this->conn_info.total_bytes_written += bytes_written;
+			}
+
 			this->conn_info.last_seq_num = seq_num;
 
 			/* lose acks */
@@ -229,12 +236,6 @@ int Server::stop_and_wait(FILE* file) {
 					perror("sendto");
 					continue;
 				}
-
-				cout << "Ack " << seq_num << " sent" << endl;
-
-				bytes_written = fwrite(data, 1, bytes_rcvd - sizeof(header), file);
-
-				this->conn_info.total_bytes_written += bytes_written;
 			}
 		} else {
 			cout << "Checksum failed" << endl;
@@ -309,20 +310,31 @@ int Server::go_back_n(FILE* file) {
 
 		bool checksum = check_checksum(checksum_s, data, sizeof(data), 8);
 
-		/* lose acks */
-		vector<int>::iterator position = find(this->conn_info.lost_acks.begin(), this->conn_info.lost_acks.end(), this->conn_info.original_packets + 1);
-		if(position != this->conn_info.lost_acks.end()) {
+		/* send ack and write buffer to file */
+		if(checksum && seq_num == expected_seq_num) {
 			cout << "Checksum OK" << endl;
 
-			/* ack was "sent", but never got to client */
 			cout << "Ack " << seq_num << " sent" << endl;
-			cout << "Ack " << seq_num << " lost" << " (for packet number " << this->conn_info.original_packets + 1 << ")" << endl;
-			this->conn_info.lost_acks.erase(position);
-		} else {
-			/* send ack and write buffer to file */
-			if(checksum && seq_num == expected_seq_num) {
+
+			bytes_written = fwrite(data, 1, bytes_rcvd - sizeof(header), file);
+
+			this->conn_info.total_bytes_written += bytes_written;
+			expected_seq_num++;
+			if(expected_seq_num > this->conn_info.max_seq_num) {
+				expected_seq_num = 0;
+			}
+			last_ack = ack;
+			last_ack_num = seq_num;
+
+			/* lose acks */
+			vector<int>::iterator position = find(this->conn_info.lost_acks.begin(), this->conn_info.lost_acks.end(), this->conn_info.original_packets + 1);
+			if(position != this->conn_info.lost_acks.end()) {
 				cout << "Checksum OK" << endl;
 
+				/* ack was "sent", but never got to client */
+				cout << "Ack " << seq_num << " lost" << " (for packet number " << this->conn_info.original_packets + 1 << ")" << endl;
+				this->conn_info.lost_acks.erase(position);
+			} else {
 				bytes_sent = sendto(this->sockfd,
 					ack.c_str(),
 					ack.length(),
@@ -334,36 +346,27 @@ int Server::go_back_n(FILE* file) {
 					perror("sendto");
 					continue;
 				}
-
-				cout << "Ack " << seq_num << " sent" << endl;
-
-				bytes_written = fwrite(data, 1, bytes_rcvd - sizeof(header), file);
-
-				this->conn_info.total_bytes_written += bytes_written;
-				expected_seq_num++;
-				last_ack = ack;
-				last_ack_num = seq_num;
-
-			} else {
-				if(!checksum) {
-					cout << "Checksum failed" << endl;
-				}
-
-				bytes_sent = sendto(this->sockfd,
-					last_ack.c_str(),
-					last_ack.length(),
-					0,
-					(struct sockaddr *) &this->conn_info.client_addr,
-					this->conn_info.addr_size
-				);
-				if(bytes_sent == -1) {
-					perror("sendto");
-					continue;
-				}
-
-				cout << "Ack " << last_ack_num << " sent" << endl;
 			}
+		} else {
+			if(!checksum) {
+				cout << "Checksum failed" << endl;
+			}
+
+			bytes_sent = sendto(this->sockfd,
+				last_ack.c_str(),
+				last_ack.length(),
+				0,
+				(struct sockaddr *) &this->conn_info.client_addr,
+				this->conn_info.addr_size
+			);
+			if(bytes_sent == -1) {
+				perror("sendto");
+				continue;
+			}
+
+			cout << "Ack " << last_ack_num << " sent" << endl;
 		}
+
 		cout << "Current window = [" << expected_seq_num << "]" << endl;
 		cout << endl;
 	}
@@ -441,11 +444,36 @@ int Server::selective_repeat(FILE* file) {
 		if(checksum && (f.seq_num >= recv_base) && (f.seq_num < (recv_base + this->conn_info.window_size))) {
 			cout << "Checksum OK" << endl;
 
+			/* packet is smallest in window and can be written */
+			if(f.seq_num == recv_base) {
+				/* write */
+				int bytes_written = fwrite(data, 1, bytes_rcvd - sizeof(header), file);
+				this->conn_info.total_bytes_written += bytes_written;
+
+				recv_base++; // recv_base = recv_base + 1 % max_seq_num + 1
+				/* check other out of order frames */
+				for(size_t i = 0; i < window.size(); i++) {
+					if(window[i].seq_num == recv_base) {
+						/* write */
+						bytes_written = fwrite(window[i].data.data(), 1, window[i].data.size(), file);
+						this->conn_info.total_bytes_written += bytes_written;
+
+						recv_base++;
+						window.erase(window.begin() + i);
+						i--;
+					}
+				}
+			} else {
+				window.push_back(f);
+				sort(window.begin(), window.end(), sort_frame);
+			}
+
+			cout << "Ack " << seq_num << " sent" << endl;
+
 			/* lose acks */
 			vector<int>::iterator position = find(this->conn_info.lost_acks.begin(), this->conn_info.lost_acks.end(), this->conn_info.original_packets + 1);
 			if(position != this->conn_info.lost_acks.end()) {
 				/* ack was "sent", but never got to client */
-				cout << "Ack " << seq_num << " sent" << endl;
 				cout << "Ack " << seq_num << " lost" << " (for packet number " << this->conn_info.original_packets + 1 << ")" << endl;
 				this->conn_info.lost_acks.erase(position);
 			} else {
@@ -461,39 +489,27 @@ int Server::selective_repeat(FILE* file) {
 					perror("sendto");
 					continue;
 				}
-
-				cout << "Ack " << seq_num << " sent" << endl;
-
-				/* packet is smallest in window and can be written */
-				if(f.seq_num == recv_base) {
-					/* write */
-					int bytes_written = fwrite(data, 1, bytes_rcvd - sizeof(header), file);
-					this->conn_info.total_bytes_written += bytes_written;
-
-					recv_base++; // recv_base = recv_base + 1 % max_seq_num + 1
-					/* check other out of order frames */
-					for(size_t i = 0; i < window.size(); i++) {
-						if(window[i].seq_num == recv_base) {
-							/* write */
-							bytes_written = fwrite(window[i].data.data(), 1, window[i].data.size(), file);
-							this->conn_info.total_bytes_written += bytes_written;
-
-							recv_base++;
-							window.erase(window.begin() + i);
-							i--;
-						}
-					}
-				} else {
-					window.push_back(f);
-					sort(window.begin(), window.end(), sort_frame);
-				}
 			}
 
 		} else if(!checksum) {
 			cout << "Checksum failed" << endl;
 			string nak = "nak" + seq_num_s;
 			/* send nak */
-			cout << "Nak " << seq_num << " sent" << endl;;
+			cout << "Nak " << seq_num << " sent" << endl;
+
+		} else if(seq_num < recv_base) {
+			/* send ack */
+			int bytes_sent = sendto(this->sockfd,
+				ack.c_str(),
+				ack.length(),
+				0,
+				(struct sockaddr *) &this->conn_info.client_addr,
+				this->conn_info.addr_size
+			);
+			if(bytes_sent == -1) {
+				perror("sendto");
+				continue;
+			}
 		}
 
 		if(!write_done) {

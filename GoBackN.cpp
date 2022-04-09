@@ -48,6 +48,9 @@ int GoBackN::send() {
 
 				current_window.push(f);
 				next_seq_num++;
+				if(next_seq_num > this->client.user.max_seq_num) {
+					next_seq_num = 0;
+				}
 
 				if(this->client.user.errors != 0) {
 					/* send current frame while checking for user specified errors */
@@ -85,12 +88,39 @@ int GoBackN::send() {
 
 		/* ack received (could be -1 if first packet was lost)*/
 		if(ack_num >= -1) {
-			/* shift window */
-			if(ack_num >= send_base && ack_num < next_seq_num) {
-				while(send_base <= ack_num) {
+			
+			/* check if ack is in current_window (without looping) */
+			bool in_window = false;
+			if(send_base + this->client.user.window_size > this->client.user.max_seq_num + 1) {
+				/* sequence number wraparound in window */
+				if((ack_num >= send_base && ack_num <= this->client.user.max_seq_num) || (ack_num >= 0 && ack_num < next_seq_num)) {
+					in_window = true;
+				}
+			} else {
+				if(ack_num >= send_base && ack_num < next_seq_num) {
+					in_window = true;
+				}
+			}
+
+			if(in_window) {
+				/* shift window */
+				while(true) {
+					if(current_window.front().seq_num == ack_num) {
+						send_base++;
+						if(send_base > this->client.user.max_seq_num) {
+							send_base = 0;
+						}
+						current_window.pop();
+						break;
+					}
+
 					send_base++;
+					if(send_base > this->client.user.max_seq_num) {
+						send_base = 0;
+					}
 					current_window.pop();
 				}
+
 				timer_running = false;
 			}
 
