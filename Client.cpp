@@ -196,6 +196,7 @@ int Client::send_frame_with_errors(Frame f) {
 		} else {
 			/* corrupt packet data then send it */
 			swap(f.data[0], f.data[f.data.size() - 1]);
+			cout << "Corrupted packet " << f.seq_num << endl;
 			return send_frame(f, false);
 		}
 

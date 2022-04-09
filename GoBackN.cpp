@@ -183,10 +183,11 @@ int GoBackN::receive_ack() {
 		}
 
 		/* split seq_num */
-		string ack_num = string(ack).substr(3, this->client.user.header_len / 2);
-		cout << "ack " << ack_num << " received" << endl;
+		string ack_num_s = string(ack).substr(3, this->client.user.header_len / 2);
+		int ack_num = stoi(ack_num_s);
+		cout << "Ack " << ack_num << " received" << endl;
 
-		return stoi(ack_num);
+		return ack_num;
 	}
 
 	return -2;
