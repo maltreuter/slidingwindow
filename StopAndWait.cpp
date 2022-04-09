@@ -79,7 +79,7 @@ int StopAndWait::send() {
 		/* send_frame_with_errors returns -2 if packet was "lost" */
 		if(bytes_sent == -2) {
 			/* we still "sent" the packet, it just got lost on the way */
-			cout << "Packet " << f.seq_num << " lost " << "(packet " << packet_num << ")" << endl;
+			cout << "Packet " << f.seq_num << " lost " << "(packet number " << packet_num << ")" << endl;
 			this->total_bytes_sent += this->client.user.header_len + f.data.size();
 		} else {
 			this->total_bytes_sent += bytes_sent;

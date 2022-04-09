@@ -64,7 +64,7 @@ int GoBackN::send() {
 
 				/* send_frame_with_errors returns -2 if packet was "lost" */
 				if(bytes_sent == -2) {
-					cout << "Packet " << f.seq_num << " lost" << " (packet " << packet_num << ")" << endl;
+					cout << "Packet " << f.seq_num << " lost" << " (packet number " << packet_num << ")" << endl;
 					this->total_bytes_sent += this->client.user.header_len + f.data.size();
 				} else {
 					this->total_bytes_sent += bytes_sent;
