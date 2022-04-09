@@ -30,6 +30,7 @@ int StopAndWait::send() {
 	Frame f = Frame();
 	int last_frame_num = -2;
 	int next_seq_num = 0;
+	int packet_num = 0;
 
 	int start_time = get_current_time();
 
@@ -37,13 +38,19 @@ int StopAndWait::send() {
 		if(!resend) {
 			/* read next frame from file */
 			f = this->client.getNextFrame(file, &read_done, next_seq_num);
+			packet_num++;
 			if(read_done) {
 				last_frame_num = f.seq_num;
 			}
+
 			next_seq_num++;
+			if(next_seq_num > this->client.user.max_seq_num) {
+				next_seq_num = 0;
+			}
+
 			if(this->client.user.errors != 0) {
 				/* send current frame while checking for user specified errors */
-				bytes_sent = this->client.send_frame_with_errors(f);
+				bytes_sent = this->client.send_frame_with_errors(f, packet_num);
 			} else {
 				bytes_sent = this->client.send_frame(f, false);
 			}
@@ -72,7 +79,7 @@ int StopAndWait::send() {
 		/* send_frame_with_errors returns -2 if packet was "lost" */
 		if(bytes_sent == -2) {
 			/* we still "sent" the packet, it just got lost on the way */
-			cout << "Packet " << f.seq_num << " lost" << endl;
+			cout << "Packet " << f.seq_num << " lost " << "(packet " << packet_num << ")" << endl;
 			this->total_bytes_sent += this->client.user.header_len + f.data.size();
 		} else {
 			this->total_bytes_sent += bytes_sent;

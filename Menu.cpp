@@ -43,6 +43,7 @@ int main(int argc, char *argv[]) {
 		c.user.packet_size = 128;
 		c.user.timeout_int = 5000;
 		c.user.window_size = 8;
+		c.user.max_seq_num = 64
 	} else {
 		cout << "Enter file to send: ";
 		cin >> c.user.file_path;
@@ -61,6 +62,9 @@ int main(int argc, char *argv[]) {
 
 		cout << "Enter window size: ";
 		cin >> c.user.window_size;
+
+		cout << "Enter max sequence number: ";
+		cin >> c.user.max_seq_num;
 	}
 
 	cout << "Enter situational errors (0 - None, 1 - Random, 2 - User Spec): ";

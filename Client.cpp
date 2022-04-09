@@ -10,6 +10,7 @@ Client::Client() {
 		-1, /* packet_size */
 		-1, /* timeout interval */
 		-1, /* window size */
+		-1, /* max sequence number */
 		-1, /* situational errors */
 		-1, /* protocol */
 		17, /* header length (1 for resent, 8 for seq num, 8 for checksum)*/
@@ -89,6 +90,11 @@ int Client::handshake() {
 
 	/* send window size */
 	if(send_to_server(to_string(this->user.window_size)) == -1) {
+		return -1;
+	}
+
+	/*send max sequence number */
+	if(send_to_server(to_string(this->user.max_seq_num)) == -1) {
 		return -1;
 	}
 	
@@ -175,15 +181,15 @@ int Client::send_frame(Frame f, bool resend) {
 	return bytes_sent;
 }
 
-int Client::send_frame_with_errors(Frame f) {
+int Client::send_frame_with_errors(Frame f, int packet_num) {
 	/* check if packet should be lost */
-	vector<int>::iterator position = find(this->user.lost_packets.begin(), this->user.lost_packets.end(), f.seq_num);
+	vector<int>::iterator position = find(this->user.lost_packets.begin(), this->user.lost_packets.end(), packet_num);
 
 	/* if packet should not be lost */
 	if(position == this->user.lost_packets.end()) {
 
 		/* check if packet should be corrupted */
-		position = find(this->user.corrupt_packets.begin(), this->user.corrupt_packets.end(), f.seq_num);
+		position = find(this->user.corrupt_packets.begin(), this->user.corrupt_packets.end(), packet_num);
 
 		/* if packet should not be corrupt */
 		if(position == this->user.corrupt_packets.end()) {
@@ -192,13 +198,11 @@ int Client::send_frame_with_errors(Frame f) {
 		} else {
 			/* corrupt packet data then send it */
 			swap(f.data[0], f.data[f.data.size() - 1]);
-			cout << "Corrupted packet " << f.seq_num << endl;
+			cout << "Corrupted packet " << f.seq_num << " (packet " << packet_num << ")" <<  endl;
 			return send_frame(f, false);
 		}
 
 	} else {
-		/* remove from lost_packets */
-		this->user.lost_packets.erase(position);
 		return -2;
 	}
 }

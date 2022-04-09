@@ -25,6 +25,7 @@ typedef struct connection_info {
 	int packet_size;
 	int header_len;
 	int window_size;
+	int max_seq_num;
 	int protocol;
 	int errors;
 	int total_bytes_written;

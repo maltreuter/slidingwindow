@@ -27,6 +27,7 @@ typedef struct user_input {
 	int packet_size;
 	int timeout_int;
 	int window_size;
+	int max_seq_num;
 	int errors;
 	int protocol;
 	int header_len;
@@ -50,7 +51,7 @@ class Client {
 		int send_to_server(string send_str);
 		Frame getNextFrame(FILE* file, bool* read_done, int seq_num);
 		int send_frame(Frame f, bool resend);
-		int send_frame_with_errors(Frame f);
+		int send_frame_with_errors(Frame f, int packet_num);
 		string create_checksum(unsigned char *data, int dataLength, int blockSize);
 };
 
