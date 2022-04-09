@@ -43,7 +43,7 @@ int main(int argc, char *argv[]) {
 		c.user.packet_size = 128;
 		c.user.timeout_int = 5000;
 		c.user.window_size = 8;
-		c.user.max_seq_num = 64
+		c.user.max_seq_num = 64;
 	} else {
 		cout << "Enter file to send: ";
 		cin >> c.user.file_path;
