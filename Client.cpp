@@ -178,6 +178,12 @@ int Client::send_frame(Frame f, bool resend) {
 		perror("sendto");
 	}
 
+	if(resend) {
+		cout << "Packet " << f.seq_num << " retransmitted" << endl;
+	} else {
+		cout << "Packet " << f.seq_num << " sent" << endl;
+	}
+
 	return bytes_sent;
 }
 
@@ -191,19 +197,19 @@ int Client::send_frame_with_errors(Frame f, int packet_num) {
 		/* check if packet should be corrupted */
 		position = find(this->user.corrupt_packets.begin(), this->user.corrupt_packets.end(), packet_num);
 
-		/* if packet should not be corrupt */
-		if(position == this->user.corrupt_packets.end()) {
-			/* send it */
-			return send_frame(f, false);
-		} else {
-			/* corrupt packet data then send it */
+		/* if packet should be corrupted */
+		if(position != this->user.corrupt_packets.end()) {
+			/* corrupt packet data */
 			swap(f.data[0], f.data[f.data.size() - 1]);
 			cout << "Corrupted packet " << f.seq_num << " (packet number " << packet_num << ")" <<  endl;
-			return send_frame(f, false);
 		}
 
+		return send_frame(f, false);
+
 	} else {
-		return -2;
+		cout << "Packet " << f.seq_num << " sent" << endl;
+		cout << "Packet " << f.seq_num << " lost" << " (packet number " << packet_num << ")" << endl;
+		return this->user.header_len + f.data.size();
 	}
 }
 

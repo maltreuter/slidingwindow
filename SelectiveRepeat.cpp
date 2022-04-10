@@ -43,7 +43,11 @@ int SelectiveRepeat::send() {
 				f.timer_time = get_current_time();
 
 				current_window.push_back(f);
+
 				next_seq_num++;
+				if(next_seq_num > this->client.user.max_seq_num) {
+					next_seq_num = 0;
+				}
 
 				if(this->client.user.errors != 0) {
 					/* send current frame while checking for user specified errors */
@@ -56,15 +60,7 @@ int SelectiveRepeat::send() {
 					continue;
 				}
 
-				cout << "Packet " << f.seq_num << " sent" << endl;
-
-				/* send_frame_with_errors returns -2 if packet was "lost" */
-				if(bytes_sent == -2) {
-					cout << "Packet " << f.seq_num << " lost" << " (packet number " << packet_num << ")" << endl;
-					this->total_bytes_sent += this->client.user.header_len + f.data.size();
-				} else {
-					this->total_bytes_sent += bytes_sent;
-				}
+				this->total_bytes_sent += bytes_sent;
 
 				/* we still "sent" the packet, it just got lost on the way */
 				original_packets++;
@@ -79,6 +75,7 @@ int SelectiveRepeat::send() {
 			cout << "Ack " << ack_num << " received" << endl;
 
 			for(size_t i = 0; i < current_window.size(); i++) {
+				/* ack the packet for the ack we received */
 				if(current_window[i].seq_num == ack_num) {
 					current_window[i].acked = true;
 					current_window[i].timer_running = false;
@@ -87,11 +84,15 @@ int SelectiveRepeat::send() {
 			}
 
 			while(!current_window.empty()) {
+				/* shift window */
 				if(!current_window[0].acked) {
 					break;
 				}
 
 				send_base++;
+				if(send_base > this->client.user.max_seq_num) {
+					send_base = 0;
+				}
 				current_window.pop_front();
 			}
 
@@ -104,7 +105,7 @@ int SelectiveRepeat::send() {
 					cout << current_window[i].seq_num << ", ";
 				}
 			}
-			cout << "]" << endl << endl;
+			cout << "]" << endl;
 
 		} else if (ack_num >= 0 && nak) {
 			cout << "Nak " << ack_num << " received" << endl;
@@ -118,7 +119,7 @@ int SelectiveRepeat::send() {
 					cout << current_window[i].seq_num << ", ";
 				}
 			}
-			cout << "]" << endl << endl;
+			cout << "]" << endl;
 
 			Frame resend;
 			for(size_t i = 0; i < current_window.size(); i++) {
@@ -137,7 +138,6 @@ int SelectiveRepeat::send() {
 				continue;
 			}
 
-			cout << "Packet " << resend.seq_num << " retransmitted" << endl << endl;
 			resent_packets++;
 			packets_sent++;
 
@@ -158,7 +158,6 @@ int SelectiveRepeat::send() {
 					continue;
 				}
 
-				cout << "Packet " << current_window[i].seq_num << " retransmitted" << endl << endl;
 				resent_packets++;
 				packets_sent++;
 
@@ -166,6 +165,7 @@ int SelectiveRepeat::send() {
 			}
 		}
 
+		cout << endl;
 
 		if(read_done) {
 			bool done = true;

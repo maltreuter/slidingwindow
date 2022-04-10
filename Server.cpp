@@ -375,6 +375,7 @@ int Server::selective_repeat(FILE* file) {
 
 	Frame f = Frame();
 	int recv_base = 0;
+	int window_end = this->conn_info.window_size - 1;
 
 	vector<Frame> window;
 
@@ -436,32 +437,70 @@ int Server::selective_repeat(FILE* file) {
 
 		f = Frame(seq_num, f_data, this->conn_info.header_len);
 
+		bool in_window = false;
+		if(recv_base + this->conn_info.window_size > this->conn_info.max_seq_num + 1) {
+			/* sequence number wraparound in window */
+			if((seq_num >= recv_base && seq_num <= this->conn_info.max_seq_num) || (seq_num >= 0 && seq_num <= window_end)) {
+				in_window = true;
+			}
+		} else {
+			if(seq_num >= recv_base && seq_num <= window_end) {
+				in_window = true;
+			}
+		}
+
 		/* packet not damaged and in current window */
-		if(checksum && (f.seq_num >= recv_base) && (f.seq_num < (recv_base + this->conn_info.window_size))) {
+		if(checksum && in_window) {
 			cout << "Checksum OK" << endl;
 
 			/* packet is smallest in window and can be written */
-			if(f.seq_num == recv_base) {
+			if(seq_num == recv_base) {
 				/* write */
 				int bytes_written = fwrite(data, 1, bytes_rcvd - sizeof(header), file);
 				this->conn_info.total_bytes_written += bytes_written;
 
 				recv_base++; // recv_base = recv_base + 1 % max_seq_num + 1
-				/* check other out of order frames */
-				for(size_t i = 0; i < window.size(); i++) {
+				if(recv_base > this->conn_info.max_seq_num) {
+					recv_base = 0
+				}
+				window_end++;
+				if(window_end > this->conn_info.max_seq_num) {
+					window_end = 0;
+				}
+
+				/* loop through the current window and shift it until there are no more frames with seq_num = recv_base */
+				size_t i = 0;
+				size_t count = 0; /* number of frames that do not equal receive base */
+				while(count < window.size()) {
 					if(window[i].seq_num == recv_base) {
 						/* write */
 						bytes_written = fwrite(window[i].data.data(), 1, window[i].data.size(), file);
 						this->conn_info.total_bytes_written += bytes_written;
 
 						recv_base++;
+						if(recv_base > this->conn_info.max_seq_num) {
+							recv_base = 0;
+						}
+						window_end++;
+						if(window_end > this->conn_info.max_seq_num) {
+							window_end = 0;
+						}
+
 						window.erase(window.begin() + i);
 						i--;
+						count = 0;
+					} else {
+						count++;
+					}
+
+					i++;
+					if(i >= window.size()) {
+						i = 0;
 					}
 				}
+				
 			} else {
 				window.push_back(f);
-				sort(window.begin(), window.end(), sort_frame);
 			}
 
 			cout << "Ack " << seq_num << " sent" << endl;
@@ -493,7 +532,9 @@ int Server::selective_repeat(FILE* file) {
 			/* send nak */
 			cout << "Nak " << seq_num << " sent" << endl;
 
-		} else if(seq_num < recv_base) {
+		} else {
+			/* frame is left of the current window */
+			/* reciever window will always be ahead of sender window, so the server would never get a packet ahead of the current window */
 			/* send ack */
 			int bytes_sent = sendto(this->sockfd,
 				ack.c_str(),

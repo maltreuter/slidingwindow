@@ -38,6 +38,7 @@ int StopAndWait::send() {
 		if(!resend) {
 			/* read next frame from file */
 			f = this->client.getNextFrame(file, &read_done, next_seq_num);
+			this->total_bytes_read += f.data.size();
 			packet_num++;
 			if(read_done) {
 				last_frame_num = f.seq_num;
@@ -68,22 +69,13 @@ int StopAndWait::send() {
 		}
 
 		if(resend) {
-			cout << "Packet " << f.seq_num << " retransmitted" << endl;
 			resent_packets++;
 		} else {
-			cout << "Packet " << f.seq_num << " sent" << endl;
 			original_packets++;
 		}
 		this->packets_sent++;
 
-		/* send_frame_with_errors returns -2 if packet was "lost" */
-		if(bytes_sent == -2) {
-			/* we still "sent" the packet, it just got lost on the way */
-			cout << "Packet " << f.seq_num << " lost " << "(packet number " << packet_num << ")" << endl;
-			this->total_bytes_sent += this->client.user.header_len + f.data.size();
-		} else {
-			this->total_bytes_sent += bytes_sent;
-		}
+		this->total_bytes_sent += bytes_sent;
 
 		int ack_num = receive_ack(send_time);
 		if(ack_num == -1) {
@@ -91,10 +83,6 @@ int StopAndWait::send() {
 			resend = true;
 		} else {
 			resend = false;
-		}
-
-		if(!resend) {
-			this->total_bytes_read += f.data.size();
 		}
 
 		/* done reading and last frame has been acked */

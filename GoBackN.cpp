@@ -63,17 +63,8 @@ int GoBackN::send() {
 					continue;
 				}
 
-				cout << "Packet " << f.seq_num << " sent" << endl;
+				this->total_bytes_sent += bytes_sent;
 
-				/* send_frame_with_errors returns -2 if packet was "lost" */
-				if(bytes_sent == -2) {
-					cout << "Packet " << f.seq_num << " lost" << " (packet number " << packet_num << ")" << endl;
-					this->total_bytes_sent += this->client.user.header_len + f.data.size();
-				} else {
-					this->total_bytes_sent += bytes_sent;
-				}
-
-				/* we still "sent" the packet, it just got lost on the way */
 				original_packets++;
 				this->packets_sent++;
 			}
@@ -137,7 +128,7 @@ int GoBackN::send() {
 					tmp.pop();
 				}
 			}
-			cout << "]" << endl << endl;
+			cout << "]" << endl;
 
 		} else {
 			if(!timer_running) {
@@ -160,7 +151,6 @@ int GoBackN::send() {
 					continue;
 				}
 
-				cout << "Packet " << resend.seq_num << " retransmitted" << endl << endl;
 				resent_packets++;
 				this->packets_sent++;
 
@@ -170,6 +160,7 @@ int GoBackN::send() {
 			timer_time = get_current_time();
 		}
 
+		cout << endl;
 	}
 
 	/* tell the server we are done sending frames */
