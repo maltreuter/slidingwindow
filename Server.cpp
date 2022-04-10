@@ -4,10 +4,6 @@ using namespace std;
 
 bool running = true;
 
-bool sort_frame(Frame a, Frame b) {
-	return a.seq_num < b.seq_num;
-}
-
 Server::Server(string port, int backlog) {
 	this->port = port;
 	this->backlog = backlog;
@@ -461,7 +457,7 @@ int Server::selective_repeat(FILE* file) {
 
 				recv_base++; // recv_base = recv_base + 1 % max_seq_num + 1
 				if(recv_base > this->conn_info.max_seq_num) {
-					recv_base = 0
+					recv_base = 0;
 				}
 				window_end++;
 				if(window_end > this->conn_info.max_seq_num) {

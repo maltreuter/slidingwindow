@@ -128,7 +128,7 @@ int GoBackN::send() {
 					tmp.pop();
 				}
 			}
-			cout << "]" << endl;
+			cout << "]" << endl << endl;
 
 		} else {
 			if(!timer_running) {
@@ -159,8 +159,6 @@ int GoBackN::send() {
 			}
 			timer_time = get_current_time();
 		}
-
-		cout << endl;
 	}
 
 	/* tell the server we are done sending frames */

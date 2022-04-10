@@ -105,7 +105,7 @@ int SelectiveRepeat::send() {
 					cout << current_window[i].seq_num << ", ";
 				}
 			}
-			cout << "]" << endl;
+			cout << "]" << endl << endl;
 
 		} else if (ack_num >= 0 && nak) {
 			cout << "Nak " << ack_num << " received" << endl;
@@ -119,7 +119,7 @@ int SelectiveRepeat::send() {
 					cout << current_window[i].seq_num << ", ";
 				}
 			}
-			cout << "]" << endl;
+			cout << "]" << endl << endl;
 
 			Frame resend;
 			for(size_t i = 0; i < current_window.size(); i++) {
@@ -164,8 +164,6 @@ int SelectiveRepeat::send() {
 				this->total_bytes_sent += bytes_sent;
 			}
 		}
-
-		cout << endl;
 
 		if(read_done) {
 			bool done = true;
