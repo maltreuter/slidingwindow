@@ -53,7 +53,6 @@ class Client {
 		Frame getNextFrame(FILE* file, bool* read_done, int seq_num);
 		int send_frame(Frame f, bool resend);
 		int send_frame_with_errors(Frame f, bool resend);
-		// string create_checksum(unsigned char *data, int dataLength, int blockSize);
 };
 
 #endif
