@@ -11,14 +11,14 @@ class Frame {
 	public:
 		int seq_num;
 		vector<unsigned char> data;
-		int header_len;
+		int ack_len;
 		bool timer_running;
 		int timer_time;
 		bool acked;
-		string checksum;
+		vector<unsigned char> checksum;
 		int packet_num;
 
-		Frame(int seq_num, vector<unsigned char> data, int header_len);
+		Frame(int seq_num, vector<unsigned char> data, int ack_len, vector<unsigned char> checksum);
 		Frame();
 		~Frame();
 

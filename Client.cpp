@@ -13,11 +13,12 @@ Client::Client() {
 		-1, /* max sequence number */
 		-1, /* situational errors */
 		-1, /* protocol */
-		17, /* header length (1 for resent, 8 for seq num, 8 for checksum)*/
+		-1, /* ack len */
+		1 + 2, /* header length (1 for resent, 2 for checksum, ack_len)*/
 		vector<int>(), /* lost packets */
 		vector<int>(), /* lost_acks */
 		vector<int>() /*corrupt_packets */
-		
+
 	};
 
 	this->sockfd = -1;
@@ -65,12 +66,12 @@ int Client::handshake() {
 	if(send_to_server(to_string(this->user.packet_size)) == -1) {
 		return -1;
 	}
-	
+
 	/* send header len to server */
 	if(send_to_server(to_string(this->user.header_len)) == -1) {
 		return -1;
 	}
-	
+
 	/* send protocol to server */
 	if(send_to_server(to_string(this->user.protocol)) == -1) {
 		return -1;
@@ -97,7 +98,7 @@ int Client::handshake() {
 	if(send_to_server(to_string(this->user.max_seq_num)) == -1) {
 		return -1;
 	}
-	
+
 	return 0;
 }
 
@@ -143,8 +144,9 @@ Frame Client::getNextFrame(FILE* file, bool* read_done, int seq_num) {
 		data.push_back(frame_data[i]);
 	}
 
-	Frame f = Frame(seq_num, data, this->user.header_len);
-	f.checksum = create_checksum(f.data.data(), f.data.size(), 8);
+	vector<unsigned char> checksum = uint16bits_to_uchars(~create_checksum(data.data(), data.size()));
+	Frame f = Frame(seq_num, data, this->user.ack_len, checksum);
+	// f.checksum = create_checksum(f.data.data(), f.data.size(), 8);
 	return f;
 }
 
@@ -160,10 +162,11 @@ int Client::send_frame(Frame f, bool resend) {
 		header = "0";
 	}
 
-	header += f.checksum + f.padSeqNum();
+	header += f.padSeqNum();
 
-	memcpy(curr_frame, header.c_str(), header.length());
-	memcpy(curr_frame + header.length(), f.data.data(), f.data.size());
+	memcpy(curr_frame, f.checksum.data(), 2);
+	memcpy(curr_frame + 2, header.c_str(), header.length());
+	memcpy(curr_frame + 2 + header.length(), f.data.data(), f.data.size());
 
 	/* send frame */
 	int bytes_sent = sendto(this->sockfd,
@@ -221,76 +224,76 @@ int Client::send_frame_with_errors(Frame f, bool resend) {
 	}
 }
 
-string Client::create_checksum(unsigned char *data, int dataLength, int blockSize) {
-	// cout << "dataLength: " << dataLength << endl;
-	int paddingSize = 0;
-	unsigned char pad = '0';
-	if (dataLength % blockSize != 0) {
-        paddingSize = blockSize - (dataLength % blockSize);
-    }
-	unsigned char padding[paddingSize];
-	for (int i = 0; i < paddingSize; i++) {
-		padding[i] = pad;
-	}
-
-	unsigned char buffer[dataLength + paddingSize];
-	memcpy(buffer, padding, paddingSize);
-	memcpy(buffer + paddingSize, data, dataLength);
-
-    string binaryString = "";
-
-    string newBinary = "";
-    for (int i = 0; i < blockSize; i++) {
-        newBinary += uchar_to_binary(buffer[i]);
-    }
-
-    for (int i = blockSize; i < dataLength; i = i + blockSize) {
-        string nextBlock = "";
-        for (int j = i; j < i + blockSize; j++) {
-            nextBlock += uchar_to_binary(buffer[j]);
-        }
-
-        string binaryAddition = "";
-        int currentSum = 0;
-        int currentCarry = 0;
-
-        for (int n = blockSize - 1; n >= 0; n--) {
-            currentSum = currentSum + (nextBlock[n] - '0') + (newBinary[n] - '0');
-            currentCarry = currentSum / 2;
-            if (currentSum == 0 || currentSum == 2) {
-                binaryAddition = '0' + binaryAddition;
-                currentSum = currentCarry;
-            } else {
-                binaryAddition = '1' + binaryAddition;
-                currentSum = currentCarry;
-            }
-        }
-
-        string finalAddition = "";
-        if (currentCarry == 1) {
-            for (int k = binaryAddition.length() - 1; k >= 0; k--) {
-                if (currentCarry == 0) {
-                    finalAddition = binaryAddition[k] + finalAddition;
-                } else if (((binaryAddition[k] - '0') + currentCarry) % 2 == 0) {
-                    finalAddition = "0" + finalAddition;
-                    currentCarry = 1;
-                } else {
-                    finalAddition = "1" + finalAddition;
-                    currentCarry = 0;
-                }
-            }
-            binaryString = finalAddition;
-        } else {
-            binaryString = binaryAddition;
-        }
-    }
-    string checksum = binaryString;
-    for (size_t i = 0; i < binaryString.length(); i++) {
-        if (binaryString[i] == '0') {
-            checksum[i] = '1';
-        } else {
-            checksum[i] = '0';
-        }
-    }
-    return checksum;
-}
+// string Client::create_checksum(unsigned char *data, int dataLength, int blockSize) {
+// 	// cout << "dataLength: " << dataLength << endl;
+// 	int paddingSize = 0;
+// 	unsigned char pad = '0';
+// 	if (dataLength % blockSize != 0) {
+//         paddingSize = blockSize - (dataLength % blockSize);
+//     }
+// 	unsigned char padding[paddingSize];
+// 	for (int i = 0; i < paddingSize; i++) {
+// 		padding[i] = pad;
+// 	}
+//
+// 	unsigned char buffer[dataLength + paddingSize];
+// 	memcpy(buffer, padding, paddingSize);
+// 	memcpy(buffer + paddingSize, data, dataLength);
+//
+//     string binaryString = "";
+//
+//     string newBinary = "";
+//     for (int i = 0; i < blockSize; i++) {
+//         newBinary += uchar_to_binary(buffer[i]);
+//     }
+//
+//     for (int i = blockSize; i < dataLength; i = i + blockSize) {
+//         string nextBlock = "";
+//         for (int j = i; j < i + blockSize; j++) {
+//             nextBlock += uchar_to_binary(buffer[j]);
+//         }
+//
+//         string binaryAddition = "";
+//         int currentSum = 0;
+//         int currentCarry = 0;
+//
+//         for (int n = blockSize - 1; n >= 0; n--) {
+//             currentSum = currentSum + (nextBlock[n] - '0') + (newBinary[n] - '0');
+//             currentCarry = currentSum / 2;
+//             if (currentSum == 0 || currentSum == 2) {
+//                 binaryAddition = '0' + binaryAddition;
+//                 currentSum = currentCarry;
+//             } else {
+//                 binaryAddition = '1' + binaryAddition;
+//                 currentSum = currentCarry;
+//             }
+//         }
+//
+//         string finalAddition = "";
+//         if (currentCarry == 1) {
+//             for (int k = binaryAddition.length() - 1; k >= 0; k--) {
+//                 if (currentCarry == 0) {
+//                     finalAddition = binaryAddition[k] + finalAddition;
+//                 } else if (((binaryAddition[k] - '0') + currentCarry) % 2 == 0) {
+//                     finalAddition = "0" + finalAddition;
+//                     currentCarry = 1;
+//                 } else {
+//                     finalAddition = "1" + finalAddition;
+//                     currentCarry = 0;
+//                 }
+//             }
+//             binaryString = finalAddition;
+//         } else {
+//             binaryString = binaryAddition;
+//         }
+//     }
+//     string checksum = binaryString;
+//     for (size_t i = 0; i < binaryString.length(); i++) {
+//         if (binaryString[i] == '0') {
+//             checksum[i] = '1';
+//         } else {
+//             checksum[i] = '0';
+//         }
+//     }
+//     return checksum;
+// }

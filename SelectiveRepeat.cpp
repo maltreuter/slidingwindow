@@ -203,7 +203,7 @@ int SelectiveRepeat::receive_ack(bool* nak) {
 
 	if(poll(fds, 1, 0) > 0) {
 		/* something to receive */
-		char ack[3 + this->client.user.header_len / 2];
+		char ack[3 + this->client.user.ack_len];
 		int bytes_rcvd = recvfrom(this->client.sockfd,
 			ack,
 			sizeof(ack),
@@ -221,7 +221,7 @@ int SelectiveRepeat::receive_ack(bool* nak) {
 		}
 
 		/* split seq_num */
-		string ack_num = string(ack).substr(3, this->client.user.header_len / 2);
+		string ack_num = string(ack).substr(3, this->client.user.ack_len);
 
 		return stoi(ack_num);
 	}

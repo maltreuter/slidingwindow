@@ -67,10 +67,13 @@ int main(int argc, char *argv[]) {
 		cin >> c.user.max_seq_num;
 	}
 
+	c.user.ack_len = to_string(c.user.max_seq_num).length();
+	c.user.header_len += c.user.ack_len;
+
 	cout << "Enter situational errors (0 - None, 1 - Random, 2 - User Spec): ";
 	int sit_errors;
 	cin >> sit_errors;
-	
+
 	if(sit_errors == 0) {
 		c.user.errors = 0;
 	} else {

@@ -126,7 +126,7 @@ int StopAndWait::receive_ack(int send_time) {
 		} else if(poll(fds, 1, 0) > 0) {
 			/* receive ack */
 			/* "ack0001\0" "ack9945\0" */
-			char ack[3 + this->client.user.header_len];
+			char ack[3 + this->client.user.ack_len];
 			int bytes_rcvd = recvfrom(this->client.sockfd,
 				ack,
 				sizeof(ack),
@@ -140,7 +140,7 @@ int StopAndWait::receive_ack(int send_time) {
 			}
 
 			/* split seq_num */
-			string ack_num_s = string(ack).substr(3, this->client.user.header_len / 2);
+			string ack_num_s = string(ack).substr(3, this->client.user.ack_len);
 			int ack_num = stoi(ack_num_s);
 			cout << "Ack " << ack_num << " received" << endl;
 

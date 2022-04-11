@@ -75,7 +75,7 @@ int GoBackN::send() {
 
 		/* ack received (could be -1 if first packet was lost)*/
 		if(ack_num >= -1) {
-			
+
 			/* check if ack is in current_window (without looping) */
 			bool in_window = false;
 			if(send_base + this->client.user.window_size > this->client.user.max_seq_num + 1) {
@@ -187,7 +187,7 @@ int GoBackN::receive_ack() {
 
 	if(poll(fds, 1, 0) > 0) {
 		/* soemthing to receive */
-		char ack[3 + this->client.user.header_len];
+		char ack[3 + this->client.user.ack_len];
 		int bytes_rcvd = recvfrom(this->client.sockfd,
 			ack,
 			sizeof(ack),
@@ -200,7 +200,7 @@ int GoBackN::receive_ack() {
 		}
 
 		/* split seq_num */
-		string ack_num_s = string(ack).substr(3, this->client.user.header_len / 2);
+		string ack_num_s = string(ack).substr(3, this->client.user.ack_len);
 		int ack_num = stoi(ack_num_s);
 		cout << "Ack " << ack_num << " received" << endl;
 

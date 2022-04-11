@@ -30,6 +30,7 @@ typedef struct user_input {
 	int max_seq_num;
 	int errors;
 	int protocol;
+	int ack_len;
 	int header_len;
 	vector<int> lost_packets;
 	vector<int> lost_acks;
@@ -52,7 +53,7 @@ class Client {
 		Frame getNextFrame(FILE* file, bool* read_done, int seq_num);
 		int send_frame(Frame f, bool resend);
 		int send_frame_with_errors(Frame f, bool resend);
-		string create_checksum(unsigned char *data, int dataLength, int blockSize);
+		// string create_checksum(unsigned char *data, int dataLength, int blockSize);
 };
 
 #endif

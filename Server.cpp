@@ -116,7 +116,7 @@ int Server::handshake() {
 
 	/* Receive errors */
 	this->conn_info.errors = stoi(receive_string());
-	
+
 	if(this->conn_info.errors == 1) {
 		this->conn_info.lost_acks = string_to_vector(receive_string());
 	}
@@ -180,16 +180,17 @@ int Server::stop_and_wait(FILE* file) {
 		}
 
 		/* parse out header */
-		unsigned char header[this->conn_info.header_len];
+		unsigned char client_cs[2];
+		unsigned char header[this->conn_info.header_len - 2];
 		unsigned char data[bytes_rcvd - this->conn_info.header_len];
-		memcpy(header, buffer, this->conn_info.header_len);
+		memcpy(client_cs, buffer, 2);
+		memcpy(header, buffer + 2, this->conn_info.header_len - 2);
 		memcpy(data, buffer + this->conn_info.header_len, bytes_rcvd - this->conn_info.header_len);
 
 		string header_s(header, header + sizeof(header));
 
 		string resent_s = header_s.substr(0, 1);
-		string checksum_s = header_s.substr(1, (this->conn_info.header_len - 1) / 2);
-		string seq_num_s = header_s.substr((this->conn_info.header_len - 1) / 2 + 1, (this->conn_info.header_len - 1) / 2);
+		string seq_num_s = header_s.substr(1, this->conn_info.header_len - 3);
 
 		int resent = stoi(resent_s);
 		ack = "ack" + seq_num_s;
@@ -201,12 +202,12 @@ int Server::stop_and_wait(FILE* file) {
 			this->conn_info.original_packets++;
 		}
 
-		if(check_checksum(checksum_s, data, sizeof(data), 8)) {
+		if(verify_checksum(uchars_to_uint16(client_cs), create_checksum(data, sizeof(data)))) {
 			cout << "Checksum OK" << endl;
 			cout << "Ack " << seq_num << " sent" << endl;
 
 			if(seq_num != this->conn_info.last_seq_num) {
-				bytes_written = fwrite(data, 1, bytes_rcvd - sizeof(header), file);
+				bytes_written = fwrite(data, 1, bytes_rcvd - this->conn_info.header_len, file);
 				this->conn_info.total_bytes_written += bytes_written;
 			}
 			this->conn_info.last_seq_num = seq_num;
@@ -247,8 +248,13 @@ int Server::go_back_n(FILE* file) {
 	string ack;
 	bool write_done = false;
 	int expected_seq_num = 0;
-	string last_ack = "ack-0000001";
 	int last_ack_num = -1;
+
+	/* pad last_ack with correct amount of 0 */
+	/* header_len - 3 is ack_len, - 2 for '-' and '1' */
+	int padding = this->conn_info.header_len - 3 - 2;
+	string last_ack = "ack-" + string(padding, '0') + "1";
+
 
 	int bytes_rcvd;
 	int bytes_written;
@@ -280,16 +286,17 @@ int Server::go_back_n(FILE* file) {
 		}
 
 		/* parse out header */
-		unsigned char header[this->conn_info.header_len];
+		unsigned char client_cs[2];
+		unsigned char header[this->conn_info.header_len - 2];
 		unsigned char data[bytes_rcvd - this->conn_info.header_len];
-		memcpy(header, buffer, this->conn_info.header_len);
+		memcpy(client_cs, buffer, 2);
+		memcpy(header, buffer + 2, this->conn_info.header_len - 2);
 		memcpy(data, buffer + this->conn_info.header_len, bytes_rcvd - this->conn_info.header_len);
 
 		string header_s(header, header + sizeof(header));
 
 		string resent_s = header_s.substr(0, 1);
-		string checksum_s = header_s.substr(1, (this->conn_info.header_len - 1) / 2);
-		string seq_num_s = header_s.substr((this->conn_info.header_len - 1) / 2 + 1, (this->conn_info.header_len - 1) / 2);
+		string seq_num_s = header_s.substr(1, this->conn_info.header_len - 3);
 
 		int resent = stoi(resent_s);
 		ack = "ack" + seq_num_s;
@@ -302,7 +309,7 @@ int Server::go_back_n(FILE* file) {
 			this->conn_info.original_packets++;
 		}
 
-		bool checksum = check_checksum(checksum_s, data, sizeof(data), 8);
+		bool checksum = verify_checksum(uchars_to_uint16(client_cs), create_checksum(data, sizeof(data)));
 
 		/* send ack and write buffer to file */
 		if(checksum && seq_num == expected_seq_num) {
@@ -310,7 +317,7 @@ int Server::go_back_n(FILE* file) {
 
 			cout << "Ack " << seq_num << " sent" << endl;
 
-			bytes_written = fwrite(data, 1, bytes_rcvd - sizeof(header), file);
+			bytes_written = fwrite(data, 1, bytes_rcvd - this->conn_info.header_len, file);
 
 			this->conn_info.total_bytes_written += bytes_written;
 			expected_seq_num++;
@@ -402,16 +409,17 @@ int Server::selective_repeat(FILE* file) {
 		}
 
 		/* parse out header */
-		unsigned char header[this->conn_info.header_len];
+		unsigned char client_cs[2];
+		unsigned char header[this->conn_info.header_len - 2];
 		unsigned char data[bytes_rcvd - this->conn_info.header_len];
-		memcpy(header, buffer, this->conn_info.header_len);
+		memcpy(client_cs, buffer, 2);
+		memcpy(header, buffer + 2, this->conn_info.header_len - 2);
 		memcpy(data, buffer + this->conn_info.header_len, bytes_rcvd - this->conn_info.header_len);
 
 		string header_s(header, header + sizeof(header));
 
 		string resent_s = header_s.substr(0, 1);
-		string checksum_s = header_s.substr(1, (this->conn_info.header_len - 1) / 2);
-		string seq_num_s = header_s.substr((this->conn_info.header_len - 1) / 2 + 1, (this->conn_info.header_len - 1) / 2);
+		string seq_num_s = header_s.substr(1, this->conn_info.header_len - 3);
 
 		int resent = stoi(resent_s);
 		string ack = "ack" + seq_num_s;
@@ -424,14 +432,15 @@ int Server::selective_repeat(FILE* file) {
 			this->conn_info.original_packets++;
 		}
 
-		bool checksum = check_checksum(checksum_s, data, sizeof(data), 8);
+		uint16_t server_cs = create_checksum(data, sizeof(data));
+		bool checksum = verify_checksum(uchars_to_uint16(client_cs), server_cs);
 
 		vector<unsigned char> f_data;
 		for(int i = 0; i < this->conn_info.packet_size; i++) {
 			f_data.push_back(data[i]);
 		}
 
-		f = Frame(seq_num, f_data, this->conn_info.header_len);
+		f = Frame(seq_num, f_data, this->conn_info.header_len - 3, uint16bits_to_uchars(server_cs));
 
 		bool in_window = false;
 		if(recv_base + this->conn_info.window_size > this->conn_info.max_seq_num + 1) {
@@ -452,7 +461,7 @@ int Server::selective_repeat(FILE* file) {
 			/* packet is smallest in window and can be written */
 			if(seq_num == recv_base) {
 				/* write */
-				int bytes_written = fwrite(data, 1, bytes_rcvd - sizeof(header), file);
+				int bytes_written = fwrite(data, 1, bytes_rcvd - this->conn_info.header_len, file);
 				this->conn_info.total_bytes_written += bytes_written;
 
 				recv_base++; // recv_base = recv_base + 1 % max_seq_num + 1
@@ -494,7 +503,7 @@ int Server::selective_repeat(FILE* file) {
 						i = 0;
 					}
 				}
-				
+
 			} else {
 				window.push_back(f);
 			}
@@ -565,97 +574,97 @@ int Server::selective_repeat(FILE* file) {
 
 
 
-bool Server::check_checksum(string checksum, unsigned char *data, int dataLength, int blockSize) {
-	// cout << "dataLength: " << dataLength << endl;
-	int paddingSize = 0;
-	unsigned char pad = '0';
-	if (dataLength % blockSize != 0) {
-        paddingSize = blockSize - (dataLength % blockSize);
-    }
-	unsigned char padding[paddingSize];
-	for (int i = 0; i < paddingSize; i++) {
-		padding[i] = pad;
-	}
-
-	unsigned char buffer[dataLength + paddingSize];
-	memcpy(buffer, padding, paddingSize);
-	memcpy(buffer + paddingSize, data, dataLength);
-
-	int currentSum = 0;
-    int currentCarry = 0;
-    string recvSum = "";
-
-    string binaryString = "";
-
-    string newBinary = "";
-    for (int i = 0; i < blockSize; i++) {
-        newBinary += uchar_to_binary(buffer[i]);
-    }
-
-    for (int i = blockSize; i < dataLength; i = i + blockSize) {
-        string nextBlock = "";
-        for (int j = i; j < i + blockSize; j++) {
-            nextBlock += uchar_to_binary(buffer[j]);
-        }
-
-        string binaryAddition = "";
-        int currentSum = 0;
-        int currentCarry = 0;
-
-        for (int n = blockSize - 1; n >= 0; n--) {
-            currentSum = currentSum + (nextBlock[n] - '0') + (newBinary[n] - '0');
-            currentCarry = currentSum / 2;
-            if (currentSum == 0 || currentSum == 2) {
-                binaryAddition = '0' + binaryAddition;
-                currentSum = currentCarry;
-            } else {
-                binaryAddition = '1' + binaryAddition;
-                currentSum = currentCarry;
-            }
-        }
-
-        string finalAddition = "";
-        if (currentCarry == 1) {
-            for (int k = binaryAddition.length() - 1; k >= 0; k--) {
-                if (currentCarry == 0) {
-                    finalAddition = binaryAddition[k] + finalAddition;
-                } else if (((binaryAddition[k] - '0') + currentCarry) % 2 == 0) {
-                    finalAddition = "0" + finalAddition;
-                    currentCarry = 1;
-                } else {
-                    finalAddition = "1" + finalAddition;
-                    currentCarry = 0;
-                }
-            }
-            binaryString = finalAddition;
-        } else {
-            binaryString = binaryAddition;
-        }
-    }
-
-    // cout << "checksum:   " << checksum << endl;
-    // cout << "recvstring: " << binaryString << endl;
-
-    for (int n = blockSize - 1; n >= 0; n--) {
-        currentSum = currentSum + (checksum[n] - '0') + (binaryString[n] - '0');
-        currentCarry = currentSum / 2;
-        if (currentSum == 0 || currentSum == 2) {
-            recvSum = '0' + recvSum;
-            currentSum = currentCarry;
-        } else {
-            recvSum = '1' + recvSum;
-            currentSum = currentCarry;
-        }
-    }
-
-	// cout << "result: " << recvSum << endl;
-
-	if (count(recvSum.begin(), recvSum.end(), '1') == blockSize) {
-        return true;
-    } else {
-        return false;
-    }
-}
+// bool Server::check_checksum(string checksum, unsigned char *data, int dataLength, int blockSize) {
+// 	// cout << "dataLength: " << dataLength << endl;
+// 	int paddingSize = 0;
+// 	unsigned char pad = '0';
+// 	if (dataLength % blockSize != 0) {
+//         paddingSize = blockSize - (dataLength % blockSize);
+//     }
+// 	unsigned char padding[paddingSize];
+// 	for (int i = 0; i < paddingSize; i++) {
+// 		padding[i] = pad;
+// 	}
+//
+// 	unsigned char buffer[dataLength + paddingSize];
+// 	memcpy(buffer, padding, paddingSize);
+// 	memcpy(buffer + paddingSize, data, dataLength);
+//
+// 	int currentSum = 0;
+//     int currentCarry = 0;
+//     string recvSum = "";
+//
+//     string binaryString = "";
+//
+//     string newBinary = "";
+//     for (int i = 0; i < blockSize; i++) {
+//         newBinary += uchar_to_binary(buffer[i]);
+//     }
+//
+//     for (int i = blockSize; i < dataLength; i = i + blockSize) {
+//         string nextBlock = "";
+//         for (int j = i; j < i + blockSize; j++) {
+//             nextBlock += uchar_to_binary(buffer[j]);
+//         }
+//
+//         string binaryAddition = "";
+//         int currentSum = 0;
+//         int currentCarry = 0;
+//
+//         for (int n = blockSize - 1; n >= 0; n--) {
+//             currentSum = currentSum + (nextBlock[n] - '0') + (newBinary[n] - '0');
+//             currentCarry = currentSum / 2;
+//             if (currentSum == 0 || currentSum == 2) {
+//                 binaryAddition = '0' + binaryAddition;
+//                 currentSum = currentCarry;
+//             } else {
+//                 binaryAddition = '1' + binaryAddition;
+//                 currentSum = currentCarry;
+//             }
+//         }
+//
+//         string finalAddition = "";
+//         if (currentCarry == 1) {
+//             for (int k = binaryAddition.length() - 1; k >= 0; k--) {
+//                 if (currentCarry == 0) {
+//                     finalAddition = binaryAddition[k] + finalAddition;
+//                 } else if (((binaryAddition[k] - '0') + currentCarry) % 2 == 0) {
+//                     finalAddition = "0" + finalAddition;
+//                     currentCarry = 1;
+//                 } else {
+//                     finalAddition = "1" + finalAddition;
+//                     currentCarry = 0;
+//                 }
+//             }
+//             binaryString = finalAddition;
+//         } else {
+//             binaryString = binaryAddition;
+//         }
+//     }
+//
+//     // cout << "checksum:   " << checksum << endl;
+//     // cout << "recvstring: " << binaryString << endl;
+//
+//     for (int n = blockSize - 1; n >= 0; n--) {
+//         currentSum = currentSum + (checksum[n] - '0') + (binaryString[n] - '0');
+//         currentCarry = currentSum / 2;
+//         if (currentSum == 0 || currentSum == 2) {
+//             recvSum = '0' + recvSum;
+//             currentSum = currentCarry;
+//         } else {
+//             recvSum = '1' + recvSum;
+//             currentSum = currentCarry;
+//         }
+//     }
+//
+// 	// cout << "result: " << recvSum << endl;
+//
+// 	if (count(recvSum.begin(), recvSum.end(), '1') == blockSize) {
+//         return true;
+//     } else {
+//         return false;
+//     }
+// }
 
 int Server::close_server() {
 	return close(this->sockfd);

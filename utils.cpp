@@ -76,9 +76,11 @@ vector<int> string_to_vector(string packets) {
 }
 
 /* package bits into uchars for sending in header */
-void uint16bits_to_uchars(uint16_t input, unsigned char *output) {
-	output[0] = (input >> 8) & 0x00FF;
-	output[1] = input & 0x00FF;
+vector<unsigned char> uint16bits_to_uchars(uint16_t input) {
+	vector<unsigned char> checksum;
+	checksum.push_back((input >> 8) & 0x00FF);
+	checksum.push_back(input & 0x00FF);
+	return checksum;
 }
 
 /* unpack the uchars that were sent back into a uint16_t */
@@ -91,7 +93,7 @@ uint16_t uchars_to_uint16(unsigned char *input) {
 /* client will create a checksum and store ~checksum as 2 unsigned characters */
 /* these 2 unsigned characters will be put into the header of a frame and sent */
 /* server will create its own checksum with the data it received */
-/* and verify that client_cs + server_cs == 1111111111111111 */
+/* and verify that client_cs + server_cs == 1111 1111 1111 1111 */
 uint16_t create_checksum(unsigned char *data, int size) {
 	int padding = 0;
 	if(size % 2 != 0) {
@@ -107,7 +109,7 @@ uint16_t create_checksum(unsigned char *data, int size) {
 	uint16_t word;
 
 	/* 0xFF00 == 1111 1111 0000 0000 */
-	for(int i = 0; i < sizeof(buff); i=i+2) {
+	for(size_t i = 0; i < sizeof(buff); i=i+2) {
 		word = ((buff[i] << 8) & 0xFF00) + (buff[i + 1] & 0xFF);
 		sum = sum + (uint32_t) word;
 	}
@@ -119,4 +121,8 @@ uint16_t create_checksum(unsigned char *data, int size) {
 	// sum = ~sum;
 
 	return (uint16_t) sum;
+}
+
+bool verify_checksum(uint16_t client, uint16_t server) {
+	return (client + server == 0xFFFF);
 }
