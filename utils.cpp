@@ -74,3 +74,48 @@ vector<int> string_to_vector(string packets) {
 
 	return result;
 }
+
+/* package bits into uchars for sending in header */
+void uint16bits_to_uchars(uint16_t input, unsigned char *output) {
+	output[0] = (input >> 8) & 0x00FF;
+	output[1] = input & 0x00FF;
+}
+
+/* unpack the uchars that were sent back into a uint16_t */
+/* need to do this for final addition of the 2 checksums */
+uint16_t uchars_to_uint16(unsigned char *input) {
+	uint16_t word = ((input[0] << 8) & 0xFF00) + (input[1] & 0xFF);
+	return word;
+}
+
+/* client will create a checksum and store ~checksum as 2 unsigned characters */
+/* these 2 unsigned characters will be put into the header of a frame and sent */
+/* server will create its own checksum with the data it received */
+/* and verify that client_cs + server_cs == 1111111111111111 */
+uint16_t create_checksum(unsigned char *data, int size) {
+	int padding = 0;
+	if(size % 2 != 0) {
+		padding = 1;
+	}
+	unsigned char buff[size + padding];
+	memcpy(buff, data, size);
+	if(padding) {
+		buff[size] = '0';
+	}
+
+	uint32_t sum = 0;
+	uint16_t word;
+
+	for(int i = 0; i < sizeof(buff); i=i+2) {
+		word = ((buff[i] << 8) & 0xFF00) + (buff[i + 1] & 0xFF);
+		sum = sum + (uint32_t) word;
+	}
+
+	while(sum >> 16) {
+		sum = (sum & 0xFFFF) + (sum >> 16);
+	}
+
+	// sum = ~sum;
+
+	return (uint16_t) sum;
+}
