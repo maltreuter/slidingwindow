@@ -106,6 +106,7 @@ uint16_t create_checksum(unsigned char *data, int size) {
 	uint32_t sum = 0;
 	uint16_t word;
 
+	/* 0xFF00 == 1111 1111 0000 0000 */
 	for(int i = 0; i < sizeof(buff); i=i+2) {
 		word = ((buff[i] << 8) & 0xFF00) + (buff[i + 1] & 0xFF);
 		sum = sum + (uint32_t) word;
