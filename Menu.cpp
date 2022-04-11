@@ -8,7 +8,8 @@
 
 using namespace std;
 
-vector<int> get_packets();
+vector<int> get_packets(string prompt);
+vector<int> get_random_packets(int percent);
 
 vector<int> get_packets(string prompt) {
 	vector<int> packets = vector<int>();
@@ -24,6 +25,14 @@ vector<int> get_packets(string prompt) {
 		packets.push_back(stoi(input));
 	}
 	cout << endl;
+
+	return packets;
+}
+
+vector<int> get_random_packets(int percent) {
+	vector<int> packets = vector<int>();
+	
+	cout << "get random packets" << endl;
 
 	return packets;
 }
@@ -75,6 +84,21 @@ int main(int argc, char *argv[]) {
 		c.user.errors = 0;
 	} else {
 		c.user.errors = 1;
+	}
+
+	if(sit_errors == 1) {
+		int percent;
+		cout << "Enter percentage of acks to lose";
+		cin >> percent;
+		c.user.lost_acks = get_random_packets(percent);
+
+		cout << "Enter percentage of packets to lose";
+		cin >> percent;
+		c.user.lost_packets = get_random_packets(percent);
+
+		cout << "Enter percentage of packets to corrupt";
+		cin >> percent;
+		c.user.corrupt_packets = get_random_packets(percent);
 	}
 
 	if(sit_errors == 2) {
