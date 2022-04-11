@@ -16,7 +16,6 @@ class Frame {
 		int timer_time;
 		bool acked;
 		vector<unsigned char> checksum;
-		int packet_num;
 
 		Frame(int seq_num, vector<unsigned char> data, int ack_len, vector<unsigned char> checksum);
 		Frame();

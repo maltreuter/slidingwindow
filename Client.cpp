@@ -190,33 +190,32 @@ int Client::send_frame(Frame f, bool resend) {
 	return bytes_sent;
 }
 
-int Client::send_frame_with_errors(Frame f, bool resend) {
+int Client::send_frame_with_errors(Frame f, bool resend, int packets_sent) {
 	if(this->user.errors == 1) {
 		/* check if packet should be lost */
-		vector<int>::iterator position = find(this->user.lost_packets.begin(), this->user.lost_packets.end(), f.packet_num);
+		vector<int>::iterator position = find(this->user.corrupt_packets.begin(), this->user.corrupt_packets.end(), packets_sent + 1);
+
+		/* if packet should be corrupted */
+		if(position != this->user.corrupt_packets.end()) {
+			/* corrupt packet data */
+			swap(f.data[0], f.data[f.data.size() - 1]);
+			cout << "Corrupted packet " << f.seq_num << " (packets sent: " << packets_sent + 1 << ")" <<  endl;
+			this->user.corrupt_packets.erase(position);
+		}
+
+		position = find(this->user.lost_packets.begin(), this->user.lost_packets.end(), packets_sent + 1);
 
 		/* if packet should not be lost */
 		if(position == this->user.lost_packets.end()) {
-
-			/* check if packet should be corrupted */
-			position = find(this->user.corrupt_packets.begin(), this->user.corrupt_packets.end(), f.packet_num);
-
-			/* if packet should be corrupted */
-			if(position != this->user.corrupt_packets.end()) {
-				/* corrupt packet data */
-				swap(f.data[0], f.data[f.data.size() - 1]);
-				cout << "Corrupted packet " << f.seq_num << " (packet number " << f.packet_num << ")" <<  endl;
-			}
-
 			return send_frame(f, resend);
-
 		} else {
 			if(resend) {
 				cout << "Packet " << f.seq_num << " retransmitted" << endl;
 			} else {
 				cout << "Packet " << f.seq_num << " sent" << endl;
 			}
-			cout << "Packet " << f.seq_num << " lost" << " (packet number " << f.packet_num << ")" << endl;
+			cout << "Packet " << f.seq_num << " lost" << " (packets sent: " << packets_sent + 1 << ")" << endl;
+			this->user.lost_packets.erase(position);
 			return this->user.header_len + f.data.size();
 		}
 	} else {

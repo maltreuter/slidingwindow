@@ -1,4 +1,6 @@
 #include <iostream>
+#include <random>
+#include <filesystem>
 
 #include "StopAndWait.h"
 #include "GoBackN.h"
@@ -9,7 +11,7 @@
 using namespace std;
 
 vector<int> get_packets(string prompt);
-vector<int> get_random_packets(int percent);
+vector<int> get_random_packets(int n_lose);
 
 vector<int> get_packets(string prompt) {
 	vector<int> packets = vector<int>();
@@ -29,10 +31,20 @@ vector<int> get_packets(string prompt) {
 	return packets;
 }
 
-vector<int> get_random_packets(int percent) {
+vector<int> get_random_packets(int n_lose, int n_packets) {
 	vector<int> packets = vector<int>();
-	
-	cout << "get random packets" << endl;
+
+	random_device rd;
+	mt19937 gen(rd());
+	uniform_int_distribution<> distr(0, n_packets);
+
+	while(packets.size() < n_lose) {
+		int random = distr(gen);
+		vector<int>::iterator position = find(packets.begin(), packets.end(), random);
+		if(position == packets.end()) {
+			packets.push_back(random);
+		}
+	}
 
 	return packets;
 }
@@ -79,6 +91,9 @@ int main(int argc, char *argv[]) {
 	c.user.ack_len = to_string(c.user.max_seq_num).length();
 	c.user.header_len += c.user.ack_len;
 
+	int file_size = filesystem::file_size(filesystem::path(c.user.file_path));
+	int n_packets = file_size / c.user.packet_size;
+
 	cout << "Enter situational errors (0 - None, 1 - Random, 2 - User Spec): ";
 	int sit_errors;
 	cin >> sit_errors;
@@ -90,18 +105,18 @@ int main(int argc, char *argv[]) {
 	}
 
 	if(sit_errors == 1) {
-		int percent;
-		cout << "Enter percentage of acks to lose";
-		cin >> percent;
-		c.user.lost_acks = get_random_packets(percent);
+		int n_lose;
+		cout << "Enter number of acks to lose (" << n_packets << " packets total) ";
+		cin >> n_lose;
+		c.user.lost_acks = get_random_packets(n_lose, n_packets);
 
-		cout << "Enter percentage of packets to lose";
-		cin >> percent;
-		c.user.lost_packets = get_random_packets(percent);
+		cout << "Enter number of packets to lose (" << n_packets << " packets total) ";
+		cin >> n_lose;
+		c.user.lost_packets = get_random_packets(n_lose, n_packets);
 
-		cout << "Enter percentage of packets to corrupt";
-		cin >> percent;
-		c.user.corrupt_packets = get_random_packets(percent);
+		cout << "Enter number of packets to corrupt (" << n_packets << " packets total) ";
+		cin >> n_lose;
+		c.user.corrupt_packets = get_random_packets(n_lose, n_packets);
 	}
 
 	if(sit_errors == 2) {

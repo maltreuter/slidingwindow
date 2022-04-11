@@ -213,10 +213,10 @@ int Server::stop_and_wait(FILE* file) {
 			this->conn_info.last_seq_num = seq_num;
 
 			/* lose acks */
-			vector<int>::iterator position = find(this->conn_info.lost_acks.begin(), this->conn_info.lost_acks.end(), this->conn_info.original_packets);
+			vector<int>::iterator position = find(this->conn_info.lost_acks.begin(), this->conn_info.lost_acks.end(), this->conn_info.packets_rcvd);
 			if(position != this->conn_info.lost_acks.end()) {
 				/* ack was "sent", but never got to client */
-				cout << "Ack " << seq_num << " lost" << " (for packet number " << this->conn_info.original_packets << ")" << endl;
+				cout << "Ack " << seq_num << " lost" << " (packets received: " << this->conn_info.packets_rcvd << ")" << endl;
 				this->conn_info.lost_acks.erase(position);
 			} else {
 				/* send ack and write buffer to file */
@@ -328,10 +328,10 @@ int Server::go_back_n(FILE* file) {
 			last_ack_num = seq_num;
 
 			/* lose acks */
-			vector<int>::iterator position = find(this->conn_info.lost_acks.begin(), this->conn_info.lost_acks.end(), this->conn_info.original_packets);
+			vector<int>::iterator position = find(this->conn_info.lost_acks.begin(), this->conn_info.lost_acks.end(), this->conn_info.packets_rcvd);
 			if(position != this->conn_info.lost_acks.end()) {
 				/* ack was "sent", but never got to client */
-				cout << "Ack " << seq_num << " lost" << " (for packet number " << this->conn_info.original_packets << ")" << endl;
+				cout << "Ack " << seq_num << " lost" << " (packets received: " << this->conn_info.packets_rcvd << ")" << endl;
 				this->conn_info.lost_acks.erase(position);
 			} else {
 				bytes_sent = sendto(this->sockfd,
@@ -511,10 +511,10 @@ int Server::selective_repeat(FILE* file) {
 			cout << "Ack " << seq_num << " sent" << endl;
 
 			/* lose acks */
-			vector<int>::iterator position = find(this->conn_info.lost_acks.begin(), this->conn_info.lost_acks.end(), this->conn_info.original_packets);
+			vector<int>::iterator position = find(this->conn_info.lost_acks.begin(), this->conn_info.lost_acks.end(), this->conn_info.packets_rcvd);
 			if(position != this->conn_info.lost_acks.end()) {
 				/* ack was "sent", but never got to client */
-				cout << "Ack " << seq_num << " lost" << " (for packet number " << this->conn_info.original_packets << ")" << endl;
+				cout << "Ack " << seq_num << " lost" << " (packets received: " << this->conn_info.packets_rcvd << ")" << endl;
 				this->conn_info.lost_acks.erase(position);
 			} else {
 				/* send ack */

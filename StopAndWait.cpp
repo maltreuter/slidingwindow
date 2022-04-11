@@ -30,7 +30,6 @@ int StopAndWait::send() {
 	Frame f = Frame();
 	int last_frame_num = -2;
 	int next_seq_num = 0;
-	int packet_num = 0;
 
 	int start_time = get_current_time();
 
@@ -39,7 +38,6 @@ int StopAndWait::send() {
 			/* read next frame from file */
 			f = this->client.getNextFrame(file, &read_done, next_seq_num);
 			this->total_bytes_read += f.data.size();
-			f.packet_num = ++packet_num;
 			if(read_done) {
 				last_frame_num = f.seq_num;
 			}
@@ -51,7 +49,7 @@ int StopAndWait::send() {
 		}
 
 		/* send current frame while checking for user specified errors */
-		bytes_sent = this->client.send_frame_with_errors(f, resend);
+		bytes_sent = this->client.send_frame_with_errors(f, resend, this->packets_sent);
 
 		int send_time = get_current_time();
 
