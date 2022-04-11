@@ -187,29 +187,37 @@ int Client::send_frame(Frame f, bool resend) {
 	return bytes_sent;
 }
 
-int Client::send_frame_with_errors(Frame f, int packet_num) {
-	/* check if packet should be lost */
-	vector<int>::iterator position = find(this->user.lost_packets.begin(), this->user.lost_packets.end(), packet_num);
+int Client::send_frame_with_errors(Frame f, bool resend) {
+	if(this->user.errors == 1) {
+		/* check if packet should be lost */
+		vector<int>::iterator position = find(this->user.lost_packets.begin(), this->user.lost_packets.end(), f.packet_num);
 
-	/* if packet should not be lost */
-	if(position == this->user.lost_packets.end()) {
+		/* if packet should not be lost */
+		if(position == this->user.lost_packets.end()) {
 
-		/* check if packet should be corrupted */
-		position = find(this->user.corrupt_packets.begin(), this->user.corrupt_packets.end(), packet_num);
+			/* check if packet should be corrupted */
+			position = find(this->user.corrupt_packets.begin(), this->user.corrupt_packets.end(), f.packet_num);
 
-		/* if packet should be corrupted */
-		if(position != this->user.corrupt_packets.end()) {
-			/* corrupt packet data */
-			swap(f.data[0], f.data[f.data.size() - 1]);
-			cout << "Corrupted packet " << f.seq_num << " (packet number " << packet_num << ")" <<  endl;
+			/* if packet should be corrupted */
+			if(position != this->user.corrupt_packets.end()) {
+				/* corrupt packet data */
+				swap(f.data[0], f.data[f.data.size() - 1]);
+				cout << "Corrupted packet " << f.seq_num << " (packet number " << f.packet_num << ")" <<  endl;
+			}
+
+			return send_frame(f, resend);
+
+		} else {
+			if(resend) {
+				cout << "Packet " << f.seq_num << " retransmitted" << endl;
+			} else {
+				cout << "Packet " << f.seq_num << " sent" << endl;
+			}
+			cout << "Packet " << f.seq_num << " lost" << " (packet number " << f.packet_num << ")" << endl;
+			return this->user.header_len + f.data.size();
 		}
-
-		return send_frame(f, false);
-
 	} else {
-		cout << "Packet " << f.seq_num << " sent" << endl;
-		cout << "Packet " << f.seq_num << " lost" << " (packet number " << packet_num << ")" << endl;
-		return this->user.header_len + f.data.size();
+		return send_frame(f, resend);
 	}
 }
 

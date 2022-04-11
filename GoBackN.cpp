@@ -40,7 +40,7 @@ int GoBackN::send() {
 		if(!read_done) {
 			if(current_window.size() < (size_t) this->client.user.window_size) {
 				f = this->client.getNextFrame(file, &read_done, next_seq_num);
-				packet_num++;
+				f.packet_num = ++packet_num;
 				this->total_bytes_read += f.data.size();
 				if(read_done) {
 					last_frame_num = next_seq_num;
@@ -52,12 +52,8 @@ int GoBackN::send() {
 					next_seq_num = 0;
 				}
 
-				if(this->client.user.errors != 0) {
-					/* send current frame while checking for user specified errors */
-					bytes_sent = this->client.send_frame_with_errors(f, packet_num);
-				} else {
-					bytes_sent = this->client.send_frame(f, false);
-				}
+				/* send current frame while checking for user specified errors */
+				bytes_sent = this->client.send_frame_with_errors(f, false);
 
 				if(bytes_sent == -1) {
 					continue;
@@ -145,7 +141,7 @@ int GoBackN::send() {
 				Frame resend = tmp.front();
 				tmp.pop();
 
-				bytes_sent = this->client.send_frame(resend, true);
+				bytes_sent = this->client.send_frame_with_errors(resend, true);
 
 				if(bytes_sent == -1) {
 					continue;

@@ -10,6 +10,7 @@ Frame::Frame(int seq_num, vector<unsigned char> data, int header_len) {
 	this->timer_time = 0;
 	this->acked = false;
 	this->checksum = "";
+	this->packet_num = -1;
 }
 
 Frame::Frame() {
@@ -20,6 +21,7 @@ Frame::Frame() {
 	this->timer_time = 0;
 	this->acked = false;
 	this->checksum = "";
+	this->packet_num = -1;
 }
 
 Frame::~Frame() {

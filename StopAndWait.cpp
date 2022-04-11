@@ -39,7 +39,7 @@ int StopAndWait::send() {
 			/* read next frame from file */
 			f = this->client.getNextFrame(file, &read_done, next_seq_num);
 			this->total_bytes_read += f.data.size();
-			packet_num++;
+			f.packet_num = ++packet_num;
 			if(read_done) {
 				last_frame_num = f.seq_num;
 			}
@@ -48,17 +48,10 @@ int StopAndWait::send() {
 			if(next_seq_num > this->client.user.max_seq_num) {
 				next_seq_num = 0;
 			}
-
-			if(this->client.user.errors != 0) {
-				/* send current frame while checking for user specified errors */
-				bytes_sent = this->client.send_frame_with_errors(f, packet_num);
-			} else {
-				bytes_sent = this->client.send_frame(f, false);
-			}
-		} else {
-			/* errors will only be checked on the first time a frame is sent */
-			bytes_sent = this->client.send_frame(f, true);
 		}
+
+		/* send current frame while checking for user specified errors */
+		bytes_sent = this->client.send_frame_with_errors(f, resend);
 
 		int send_time = get_current_time();
 

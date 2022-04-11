@@ -37,7 +37,7 @@ int SelectiveRepeat::send() {
 		if(!read_done) {
 			if(current_window.size() < (size_t) this->client.user.window_size) {
 				f = this->client.getNextFrame(file, &read_done, next_seq_num);
-				packet_num++;
+				f.packet_num = ++packet_num;
 				this->total_bytes_read += f.data.size();
 				f.timer_running = true;
 				f.timer_time = get_current_time();
@@ -49,12 +49,7 @@ int SelectiveRepeat::send() {
 					next_seq_num = 0;
 				}
 
-				if(this->client.user.errors != 0) {
-					/* send current frame while checking for user specified errors */
-					bytes_sent = this->client.send_frame_with_errors(f, packet_num);
-				} else {
-					bytes_sent = this->client.send_frame(f, false);
-				}
+				bytes_sent = this->client.send_frame_with_errors(f, false);
 
 				if(bytes_sent == -1) {
 					continue;
@@ -62,7 +57,6 @@ int SelectiveRepeat::send() {
 
 				this->total_bytes_sent += bytes_sent;
 
-				/* we still "sent" the packet, it just got lost on the way */
 				original_packets++;
 				packets_sent++;
 			}
@@ -131,7 +125,7 @@ int SelectiveRepeat::send() {
 				}
 			}
 
-			bytes_sent = this->client.send_frame(resend, true);
+			bytes_sent = this->client.send_frame_with_errors(resend, true);
 
 			if(bytes_sent == -1) {
 				perror("sendto");
@@ -152,7 +146,7 @@ int SelectiveRepeat::send() {
 
 				current_window[i].timer_time = current_time;
 
-				bytes_sent = this->client.send_frame(current_window[i], true);
+				bytes_sent = this->client.send_frame_with_errors(current_window[i], true);
 
 				if(bytes_sent == -1) {
 					continue;
