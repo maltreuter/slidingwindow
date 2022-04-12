@@ -47,6 +47,7 @@ void Server::start_server() {
 
 		break;
 	}
+	freeaddrinfo(this->address_info);
 }
 
 int Server::handle_connections(int n_loops) {
@@ -61,7 +62,7 @@ int Server::handle_connections(int n_loops) {
 
 	handshake();
 
-	string file_path = "./out" + to_string(n_loops);
+	string file_path = "/tmp/menterzj3144out" + to_string(n_loops);
 	FILE *file = fopen(file_path.c_str(), "wb");
 
 	if(this->conn_info.protocol == 0) {
