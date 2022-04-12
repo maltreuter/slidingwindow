@@ -20,7 +20,8 @@ Client::Client() {
 		vector<int>() /*corrupt_packets */
 
 	};
-
+	
+	this->address_info = NULL;
 	this->sockfd = -1;
 }
 
@@ -29,15 +30,15 @@ Client::~Client() {
 }
 
 int Client::connect() {
-	struct addrinfo hints, *address_info, *p;
+	struct addrinfo hints, *p;
 
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family   = AF_UNSPEC;
 	hints.ai_socktype = SOCK_DGRAM;
 
-	getaddrinfo(this->user.host.c_str(), this->user.port.c_str(), &hints, &address_info);
+	getaddrinfo(this->user.host.c_str(), this->user.port.c_str(), &hints, &this->address_info);
 
-	for(p = address_info; p != NULL; p = p->ai_next) {
+	for(p = this->address_info; p != NULL; p = p->ai_next) {
 		this->sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol);
 		if(this->sockfd == -1) {
 			perror("socket");
@@ -54,6 +55,7 @@ int Client::connect() {
 
 int Client::disconnect() {
 	close(this->sockfd);
+	freeaddrinfo(this->address_info);
 	return 0;
 }
 

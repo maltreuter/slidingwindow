@@ -42,6 +42,7 @@ class Client {
 		user_input user;
 		int sockfd;
 		struct sockaddr *server_addr;
+		struct addrinfo *address_info;
 		socklen_t server_addr_len;
 
 		Client();

@@ -38,7 +38,7 @@ vector<int> get_random_packets(int n_lose, int n_packets) {
 	mt19937 gen(rd());
 	uniform_int_distribution<> distr(0, n_packets);
 
-	while(packets.size() < n_lose) {
+	while(packets.size() < (size_t) n_lose) {
 		int random = distr(gen);
 		vector<int>::iterator position = find(packets.begin(), packets.end(), random);
 		if(position == packets.end()) {
